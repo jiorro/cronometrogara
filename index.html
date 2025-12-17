@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Cronometro vocale</title>
+  <style>
+    body { font-family: Arial; text-align: center; margin-top: 50px; }
+    #time { font-size: 2em; margin: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Cronometro con comandi vocali</h1>
+  <div id="time">00:00.0</div>
+  <button id="startMic">Attiva microfono</button>
+  <div id="log"></div>
+
+<script>
+let startTime = null;
+let timerInterval = null;
+let lastLapTime = null;
+let specialMoment = null;
+
+// Funzione per aggiornare il cronometro
+function updateTimer() {
+  const elapsed = Date.now() - startTime;
+  const seconds = Math.floor(elapsed / 1000);
+  const millis = Math.floor((elapsed % 1000) / 100);
+  document.getElementById("time").textContent =
+    String(seconds).padStart(2, "0") + ":" + String(millis);
+}
+
+// Avvia cronometro
+function startTimer() {
+  startTime = Date.now();
+  clearInterval(timerInterval);
+  timerInterval = setInterval(updateTimer, 100);
+}
+
+// Ferma cronometro e mostra tempo
+function stopTimer() {
+  clearInterval(timerInterval);
+  const elapsed = Date.now() - startTime;
+  lastLapTime = elapsed;
+  const seconds = (elapsed / 1000).toFixed(2);
+  log("Tempo: " + seconds + "s");
+  startTimer(); // riparte subito un nuovo cronometro
+}
+
+// Log a schermo
+function log(msg) {
+  const div = document.getElementById("log");
+  div.innerHTML += msg + "<br>";
+}
+
+// Sintesi vocale
+function speak(text) {
+  const utter = new SpeechSynthesisUtterance(text);
+  speechSynthesis.speak(utter);
+}
+
+// Riconoscimento vocale
+function initSpeech() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert("Il tuo browser non supporta SpeechRecognition.");
+    return;
+  }
+  const recognition = new SpeechRecognition();
+  recognition.lang = "it-IT";
+  recognition.continuous = true;
+
+  recognition.onresult = (event) => {
+    const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
+    log("Comando: " + transcript);
+
+    if (transcript.includes("tempo")) {
+      startTimer();
+      log("Cronometro avviato");
+    }
+    else if (transcript.includes("fine")) {
+      stopTimer();
+    }
+    else if (transcript.includes("tieni")) {
+      // memorizza il momento attuale
+      specialMoment = Date.now() - startTime;
+      log("Segnato momento speciale a " + (specialMoment/1000).toFixed(2) + "s");
+    }
+  };
+
+  recognition.start();
+
+  // Controllo continuo per "tieni"
+  setInterval(() => {
+    if (specialMoment !== null) {
+      const elapsed = Date.now() - startTime;
+      if (elapsed >= specialMoment) {
+        speak("Momento speciale raggiunto!");
+        specialMoment = null; // reset
+      }
+    }
+  }, 200);
+}
+
+document.getElementById("startMic").onclick = initSpeech;
+</script>
+</body>
+</html>
