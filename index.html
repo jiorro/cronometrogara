@@ -4,8 +4,9 @@
   <meta charset="UTF-8">
   <title>Cronometro vocale</title>
   <style>
-    body { font-family: Arial; text-align: center; margin-top: 50px; }
+    body { font-family: Arial; text-align: center; margin-top: 40px; }
     #time { font-size: 2em; margin: 20px; }
+    #log { text-align: left; margin: 20px auto; width: 60%; }
   </style>
 </head>
 <body>
@@ -17,10 +18,10 @@
 <script>
 let startTime = null;
 let timerInterval = null;
-let lastLapTime = null;
+let laps = [];
 let specialMoment = null;
 
-// Funzione per aggiornare il cronometro
+// Aggiorna cronometro
 function updateTimer() {
   const elapsed = Date.now() - startTime;
   const seconds = Math.floor(elapsed / 1000);
@@ -34,28 +35,54 @@ function startTimer() {
   startTime = Date.now();
   clearInterval(timerInterval);
   timerInterval = setInterval(updateTimer, 100);
+  speak("tempo avviato");
+  log("Cronometro avviato");
 }
 
-// Ferma cronometro e mostra tempo
+// Ferma cronometro e valuta giro
 function stopTimer() {
   clearInterval(timerInterval);
   const elapsed = Date.now() - startTime;
-  lastLapTime = elapsed;
+  laps.push(elapsed);
   const seconds = (elapsed / 1000).toFixed(2);
-  log("Tempo: " + seconds + "s");
-  startTimer(); // riparte subito un nuovo cronometro
+
+  // Valutazione giro
+  let message = "";
+  const best = Math.min(...laps);
+  const worst = Math.max(...laps);
+  const position = laps.length;
+
+  if (elapsed === best) {
+    message = "giro migliore";
+  } else if (elapsed === worst) {
+    message = "giro peggiore";
+  } else {
+    message = "giro posizione " + position;
+  }
+
+  speak("Tempo " + seconds + " secondi, " + message);
+  log("Tempo: " + seconds + "s → " + message);
+
+  startTimer(); // riparte subito
 }
 
-// Log a schermo
-function log(msg) {
-  const div = document.getElementById("log");
-  div.innerHTML += msg + "<br>";
+// Segna momento speciale
+function markMoment() {
+  specialMoment = Date.now() - startTime;
+  speak("punto preso");
+  log("Momento speciale segnato a " + (specialMoment/1000).toFixed(2) + "s");
 }
 
 // Sintesi vocale
 function speak(text) {
   const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = "it-IT";
   speechSynthesis.speak(utter);
+}
+
+// Log
+function log(msg) {
+  document.getElementById("log").innerHTML += msg + "<br>";
 }
 
 // Riconoscimento vocale
@@ -73,17 +100,15 @@ function initSpeech() {
     const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
     log("Comando: " + transcript);
 
-    if (transcript.includes("tempo")) {
+    // Sinonimi
+    if (["tempo","start","via","parti"].some(w => transcript.includes(w))) {
       startTimer();
-      log("Cronometro avviato");
     }
-    else if (transcript.includes("fine")) {
+    else if (["fine","stop","ferma","chiudi"].some(w => transcript.includes(w))) {
       stopTimer();
     }
-    else if (transcript.includes("tieni")) {
-      // memorizza il momento attuale
-      specialMoment = Date.now() - startTime;
-      log("Segnato momento speciale a " + (specialMoment/1000).toFixed(2) + "s");
+    else if (["tieni","ricorda","segna","mark"].some(w => transcript.includes(w))) {
+      markMoment();
     }
   };
 
@@ -94,8 +119,9 @@ function initSpeech() {
     if (specialMoment !== null) {
       const elapsed = Date.now() - startTime;
       if (elapsed >= specialMoment) {
-        speak("Momento speciale raggiunto!");
-        specialMoment = null; // reset
+        // Suono personalizzato → sostituisci "suono.mp3" con il tuo file
+        new Audio("suono.mp3").play();
+        specialMoment = null;
       }
     }
   }, 200);
