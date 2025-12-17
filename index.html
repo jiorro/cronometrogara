@@ -13,9 +13,6 @@
   <h1>Cronometro con comandi vocali</h1>
   <div id="time">00:00.0</div>
   <button id="startMic">Attiva microfono</button>
-    <p>comandi utilizzabili: per far cominciae il cronometro: tempo start via parti</p>
-   <p> comandi utilizzabili: per far terminare il cronometro: fine stop ferma chiudi</p>
-  <p>  comandi utilizzabili: per segnare un momento sul cronometro: tieni ricorda segnamark</p>
   <div id="log"></div>
 
 <script>
@@ -24,20 +21,20 @@ let timerInterval = null;
 let laps = [];
 let specialMoment = null;
 
-// Aggiorna cronometro
+// Aggiorna cronometro (minuti:secondi)
 function updateTimer() {
   const elapsed = Date.now() - startTime;
-  const seconds = Math.floor(elapsed / 1000);
-  const millis = Math.floor((elapsed % 1000) / 100);
+  const minutes = Math.floor(elapsed / 60000);
+  const seconds = Math.floor((elapsed % 60000) / 1000);
   document.getElementById("time").textContent =
-    String(seconds).padStart(2, "0") + ":" + String(millis);
+    String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0");
 }
 
 // Avvia cronometro
 function startTimer() {
   startTime = Date.now();
   clearInterval(timerInterval);
-  timerInterval = setInterval(updateTimer, 100);
+  timerInterval = setInterval(updateTimer, 200);
   speak("tempo avviato");
   log("Cronometro avviato");
 }
@@ -47,7 +44,9 @@ function stopTimer() {
   clearInterval(timerInterval);
   const elapsed = Date.now() - startTime;
   laps.push(elapsed);
-  const seconds = (elapsed / 1000).toFixed(2);
+
+  const minutes = Math.floor(elapsed / 60000);
+  const seconds = ((elapsed % 60000) / 1000).toFixed(2);
 
   // Valutazione giro
   let message = "";
@@ -63,8 +62,8 @@ function stopTimer() {
     message = "giro posizione " + position;
   }
 
-  speak("Tempo " + seconds + " secondi, " + message);
-  log("Tempo: " + seconds + "s → " + message);
+  speak("Tempo " + minutes + " minuti e " + seconds + " secondi, " + message);
+  log("Tempo: " + minutes + "m " + seconds + "s → " + message);
 
   startTimer(); // riparte subito
 }
@@ -78,9 +77,17 @@ function markMoment() {
 
 // Sintesi vocale
 function speak(text) {
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.lang = "it-IT";
-  speechSynthesis.speak(utter);
+  if ('speechSynthesis' in window) {
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = "it-IT";
+    // puoi scegliere una voce italiana se disponibile
+    const voices = speechSynthesis.getVoices();
+    const italianVoice = voices.find(v => v.lang.startsWith("it"));
+    if (italianVoice) utter.voice = italianVoice;
+    speechSynthesis.speak(utter);
+  } else {
+    console.log("Sintesi vocale non supportata dal browser.");
+  }
 }
 
 // Log
