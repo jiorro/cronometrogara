@@ -40,7 +40,7 @@ function startTimer() {
   startTime = Date.now();
   clearInterval(timerInterval);
   timerInterval = setInterval(updateTimer, 200);
-  new Audio("starttime (1).mp3").play(); // file di avvio
+  new Audio("starttime (1).mp3").play(); // suono di avvio
   log("Cronometro avviato");
 }
 
@@ -57,17 +57,19 @@ function stopTimer() {
   const worst = Math.max(...laps);
 
   if (elapsed === best) {
-    new Audio("Record (online-voice-recorder (1).mp3").play();
+    new Audio("Record (online-voice-recorder (1).mp3").play(); // giro migliore
     log("Tempo: " + minutes + "m " + seconds + "s → giro migliore");
   } else if (elapsed === worst) {
-    new Audio("worst lap.mp3").play();
+    new Audio("worst lap.mp3").play(); // giro peggiore
     log("Tempo: " + minutes + "m " + seconds + "s → giro peggiore");
   } else {
-    new Audio("normal lap time.mp3").play();
+    new Audio("normal lap time.mp3").play(); // giro normale
     log("Tempo: " + minutes + "m " + seconds + "s → giro normale");
   }
 
-  startTimer(); // riparte subito
+  // NON riparte automaticamente con starttime.mp3
+  startTime = Date.now();
+  timerInterval = setInterval(updateTimer, 200);
 }
 
 // Segna momento speciale (checkmark)
@@ -129,7 +131,7 @@ function initSpeech() {
         if (mark.lastLapTriggered < currentLap) {
           if (Math.abs(elapsed - mark.time) < 300) { // tolleranza 0.3s
             new Audio("lap reminder_.mp3").play();
-            mark.lastLapTriggered = currentLap; // segna che ha già suonato in questo giro
+            mark.lastLapTriggered = currentLap; // suona una sola volta per giro
           }
         }
       });
@@ -141,3 +143,4 @@ document.getElementById("startMic").onclick = initSpeech;
 </script>
 </body>
 </html>
+
