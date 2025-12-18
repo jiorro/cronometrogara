@@ -23,8 +23,8 @@
 let startTime = null;
 let timerInterval = null;
 let laps = [];
-let checkmarks = []; // lista di momenti segnati
-let checkmarkActive = true; // flag per attivare/disattivare reminder
+let checkmarks = [];
+let checkmarkActive = true;
 
 // Aggiorna cronometro (minuti:secondi)
 function updateTimer() {
@@ -40,7 +40,7 @@ function startTimer() {
   startTime = Date.now();
   clearInterval(timerInterval);
   timerInterval = setInterval(updateTimer, 200);
-  speak("tempo avviato");
+  new Audio("remind next lap.mp3").play(); // feedback avvio
   log("Cronometro avviato");
 }
 
@@ -53,21 +53,19 @@ function stopTimer() {
   const minutes = Math.floor(elapsed / 60000);
   const seconds = ((elapsed % 60000) / 1000).toFixed(2);
 
-  let message = "";
   const best = Math.min(...laps);
   const worst = Math.max(...laps);
-  const position = laps.length;
 
   if (elapsed === best) {
-    message = "giro migliore";
+    new Audio("Record (online-voice-recorder (1).mp3").play(); // giro migliore
+    log("Tempo: " + minutes + "m " + seconds + "s → giro migliore");
   } else if (elapsed === worst) {
-    message = "giro peggiore";
+    new Audio("worst lap.mp3").play(); // giro peggiore
+    log("Tempo: " + minutes + "m " + seconds + "s → giro peggiore");
   } else {
-    message = "giro posizione " + position;
+    new Audio("normal lap time.mp3").play(); // giro normale
+    log("Tempo: " + minutes + "m " + seconds + "s → giro normale");
   }
-
-  speak("Tempo " + minutes + " minuti e " + seconds + " secondi, " + message);
-  log("Tempo: " + minutes + "m " + seconds + "s → " + message);
 
   startTimer(); // riparte subito
 }
@@ -76,17 +74,8 @@ function stopTimer() {
 function markMoment() {
   const moment = Date.now() - startTime;
   checkmarks.push(moment);
-  speak("punto preso");
+  new Audio("remind next lap.mp3").play(); // conferma segnalazione
   log("Checkmark segnato a " + (moment/1000).toFixed(2) + "s");
-}
-
-// Sintesi vocale
-function speak(text) {
-  if ('speechSynthesis' in window) {
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = "it-IT";
-    speechSynthesis.speak(utter);
-  }
 }
 
 // Log
@@ -120,12 +109,10 @@ function initSpeech() {
     }
     else if (["spegni checkmark","annulla checkmark","no checkmark","non tieni","annulla tieni"].some(w => transcript.includes(w))) {
       checkmarkActive = false;
-      speak("checkmark disattivato");
       log("Reminder checkmark in pausa");
     }
     else if (["riprendi checkmark","attiva checkmark","riattiva checkmark"].some(w => transcript.includes(w))) {
       checkmarkActive = true;
-      speak("checkmark riattivato");
       log("Reminder checkmark riattivato");
     }
   };
@@ -138,7 +125,7 @@ function initSpeech() {
       const elapsed = Date.now() - startTime;
       checkmarks.forEach(moment => {
         if (Math.abs(elapsed - moment) < 300) { // tolleranza 0.3s
-          new Audio("suono.mp3").play(); // sostituisci con il tuo file
+          new Audio("lap reminder_.mp3").play(); // reminder al giro successivo
         }
       });
     }
