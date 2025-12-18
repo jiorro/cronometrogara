@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>cronmertodagara</title>
+  <title>Cronometro vocale</title>
   <style>
     body { font-family: Arial; text-align: center; margin-top: 40px; }
     #time { font-size: 2em; margin: 20px; }
@@ -13,32 +13,11 @@
   <h1>Cronometro con comandi vocali</h1>
   <div id="time">00:00.0</div>
   <button id="startMic">Attiva microfono</button>
-
-<script>
-function initSpeech() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    alert("Il tuo browser non supporta SpeechRecognition.");
-    return;
-  }
-
-  const recognition = new SpeechRecognition();
-  recognition.lang = "it-IT";
-  recognition.continuous = true;
-
-  recognition.onresult = (event) => {
-    const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
-    console.log("Hai detto:", transcript);
-    // qui metti la logica dei comandi (via, fine, tieni, ecc.)
-  };
-
-  recognition.start();
-}
-
-// collega il bottone alla funzione
-document.getElementById("startMic").onclick = initSpeech;
-</script>
-
+  <p>comandi utilizzabili: per far cominciare il cronometro: tempo start via parti</p>
+  <p>comandi utilizzabili: per far terminare il cronometro: fine stop ferma chiudi</p>
+  <p>comandi utilizzabili: per segnare un momento sul cronometro: tieni ricorda segna mark</p>
+  <p>comandi utilizzabili: per gestire i checkmark: spegni checkmark, annulla checkmark, no checkmark, non tieni, annulla tieni, riprendi checkmark</p>
+  <div id="log"></div>
 
 <script>
 let startTime = null;
@@ -47,12 +26,21 @@ let laps = [];
 let checkmarks = [];
 let checkmarkActive = true;
 
+// Aggiorna cronometro (minuti:secondi)
+function updateTimer() {
+  const elapsed = Date.now() - startTime;
+  const minutes = Math.floor(elapsed / 60000);
+  const seconds = Math.floor((elapsed % 60000) / 1000);
+  document.getElementById("time").textContent =
+    String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0");
+}
+
 // Avvia cronometro
 function startTimer() {
   startTime = Date.now();
   clearInterval(timerInterval);
   timerInterval = setInterval(updateTimer, 200);
-  new Audio("starttime (1).mp3").play(); // feedback avvio
+  new Audio("starttime (1).mp3").play(); // file di avvio
   log("Cronometro avviato");
 }
 
@@ -85,31 +73,71 @@ function stopTimer() {
 // Segna momento speciale (checkmark)
 function markMoment() {
   const moment = Date.now() - startTime;
-  checkmarks.push({time: moment, activeNextLap: true, lastLapTriggered: -1});
+  checkmarks.push({time: moment, lastLapTriggered: -1});
   new Audio("remind next lap.mp3").play(); // conferma segnalazione
   log("Checkmark segnato a " + (moment/1000).toFixed(2) + "s");
 }
 
-// Controllo continuo dei checkmark
-setInterval(() => {
-  if (checkmarkActive && checkmarks.length > 0 && startTime) {
-    const elapsed = Date.now() - startTime;
+// Log
+function log(msg) {
+  document.getElementById("log").innerHTML += msg + "<br>";
+}
 
-    checkmarks.forEach(mark => {
-      // calcolo giro corrente (numero di giri già completati)
+// Riconoscimento vocale
+function initSpeech() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert("Il tuo browser non supporta SpeechRecognition.");
+    return;
+  }
+  const recognition = new SpeechRecognition();
+  recognition.lang = "it-IT";
+  recognition.continuous = true;
+
+  recognition.onresult = (event) => {
+    const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
+    log("Comando: " + transcript);
+
+    if (["tempo","start","via","parti"].some(w => transcript.includes(w))) {
+      startTimer();
+    }
+    else if (["fine","stop","ferma","chiudi"].some(w => transcript.includes(w))) {
+      stopTimer();
+    }
+    else if (["tieni","ricorda","segna","mark"].some(w => transcript.includes(w))) {
+      markMoment();
+    }
+    else if (["spegni checkmark","annulla checkmark","no checkmark","non tieni","annulla tieni"].some(w => transcript.includes(w))) {
+      checkmarkActive = false;
+      log("Reminder checkmark in pausa");
+    }
+    else if (["riprendi checkmark","attiva checkmark","riattiva checkmark"].some(w => transcript.includes(w))) {
+      checkmarkActive = true;
+      log("Reminder checkmark riattivato");
+    }
+  };
+
+  recognition.start();
+
+  // Controllo continuo dei checkmark
+  setInterval(() => {
+    if (checkmarkActive && checkmarks.length > 0 && startTime) {
+      const elapsed = Date.now() - startTime;
       const currentLap = laps.length;
 
-      // se siamo al giro successivo rispetto a quando è stato segnato
-      if (mark.activeNextLap && mark.lastLapTriggered < currentLap) {
-        if (Math.abs(elapsed - mark.time) < 300) { // tolleranza 0.3s
-          new Audio("lap reminder_.mp3").play();
-          mark.lastLapTriggered = currentLap; // segna che ha già suonato in questo giro
+      checkmarks.forEach(mark => {
+        if (mark.lastLapTriggered < currentLap) {
+          if (Math.abs(elapsed - mark.time) < 300) { // tolleranza 0.3s
+            new Audio("lap reminder_.mp3").play();
+            mark.lastLapTriggered = currentLap; // segna che ha già suonato in questo giro
+          }
         }
-      }
-    });
-  }
-}, 200);
+      });
+    }
+  }, 200);
+}
 
+document.getElementById("startMic").onclick = initSpeech;
 </script>
 </body>
 </html>
