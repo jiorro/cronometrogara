@@ -119,6 +119,47 @@ function initSpeech() {
   };
 
   recognition.start();
+function initSpeech() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert("Il tuo browser non supporta SpeechRecognition.");
+    return;
+  }
+
+  const recognition = new SpeechRecognition();
+  recognition.lang = "it-IT";
+  recognition.continuous = true;
+
+  recognition.onresult = (event) => {
+    const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
+    log("Comando: " + transcript);
+
+    if (["tempo","start","via","parti"].some(w => transcript.includes(w))) {
+      startTimer();
+    }
+    else if (["fine","stop","ferma","chiudi"].some(w => transcript.includes(w))) {
+      stopTimer();
+    }
+    else if (["tieni","ricorda","segna","mark"].some(w => transcript.includes(w))) {
+      markMoment();
+    }
+    else if (["spegni checkmark","annulla checkmark","no checkmark","non tieni","annulla tieni"].some(w => transcript.includes(w))) {
+      checkmarkActive = false;
+      log("Reminder checkmark in pausa");
+    }
+    else if (["riprendi checkmark","attiva checkmark","riattiva checkmark"].some(w => transcript.includes(w))) {
+      checkmarkActive = true;
+      log("Reminder checkmark riattivato");
+    }
+  };
+
+  // Riattiva automaticamente se il microfono si chiude
+  recognition.onend = () => {
+    recognition.start();
+  };
+
+  recognition.start();
+}
 
   // Controllo continuo dei checkmark
   setInterval(() => {
