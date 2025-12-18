@@ -13,11 +13,32 @@
   <h1>Cronometro con comandi vocali</h1>
   <div id="time">00:00.0</div>
   <button id="startMic">Attiva microfono</button>
-  <p>comandi utilizzabili: per far cominciare il cronometro: tempo start via parti</p>
-  <p>comandi utilizzabili: per far terminare il cronometro: fine stop ferma chiudi</p>
-  <p>comandi utilizzabili: per segnare un momento sul cronometro: tieni ricorda segna mark</p>
-  <p>comandi utilizzabili: per gestire i checkmark: spegni checkmark, annulla checkmark, no checkmark, non tieni, annulla tieni, riprendi checkmark</p>
-  <div id="log"></div>
+
+<script>
+function initSpeech() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert("Il tuo browser non supporta SpeechRecognition.");
+    return;
+  }
+
+  const recognition = new SpeechRecognition();
+  recognition.lang = "it-IT";
+  recognition.continuous = true;
+
+  recognition.onresult = (event) => {
+    const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
+    console.log("Hai detto:", transcript);
+    // qui metti la logica dei comandi (via, fine, tieni, ecc.)
+  };
+
+  recognition.start();
+}
+
+// collega il bottone alla funzione
+document.getElementById("startMic").onclick = initSpeech;
+</script>
+
 
 <script>
 let startTime = null;
