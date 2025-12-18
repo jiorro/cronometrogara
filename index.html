@@ -44,7 +44,6 @@ function startTimer() {
   log("Cronometro avviato");
 }
 
-// Ferma cronometro e valuta giro
 function stopTimer() {
   clearInterval(timerInterval);
   const elapsed = Date.now() - startTime;
@@ -57,17 +56,17 @@ function stopTimer() {
   const worst = Math.max(...laps);
 
   if (elapsed === best) {
-    new Audio("Record (online-voice-recorder (1).mp3").play(); // giro migliore
+    new Audio("Record (online-voice-recorder (1).mp3").play();
     log("Tempo: " + minutes + "m " + seconds + "s → giro migliore");
   } else if (elapsed === worst) {
-    new Audio("worst lap.mp3").play(); // giro peggiore
+    new Audio("worst lap.mp3").play();
     log("Tempo: " + minutes + "m " + seconds + "s → giro peggiore");
   } else {
-    new Audio("normal lap time.mp3").play(); // giro normale
+    new Audio("normal lap time.mp3").play();
     log("Tempo: " + minutes + "m " + seconds + "s → giro normale");
   }
 
-  // NON riparte automaticamente con starttime.mp3
+  // Riavvio cronometro SENZA suono di avvio
   startTime = Date.now();
   timerInterval = setInterval(updateTimer, 200);
 }
