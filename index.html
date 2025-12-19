@@ -142,27 +142,24 @@ function initSpeech() {
   recognition.start();
 
   setInterval(() => {
-    if (checkmarkActive && checkmarks.length > 0 && startTime && !muteMode) {
-      const elapsed = Date.now() - startTime;
-      const currentLap = laps.length;
-
-      checkmarks.forEach(mark => {
-        if (mark.lastLapTriggered < currentLap) {
-          if (Math.abs(elapsed - mark.time) < 300) {
-            new Audio("lap reminder_.mp3").play();
-            mark.lastLapTriggered = currentLap;
-          }
+    checkmarks.forEach(mark => {
+      if (mark.lastLapTriggered < currentLap) {
+        if (Math.abs(elapsed - mark.time) < 300) {
+          new Audio("lap reminder_.mp3").play();
+          mark.lastLapTriggered = currentLap;
         }
-      });
-    }
-  }, 200);
-}
-</script>
+      }
+    });
+  }
+}, 200);
+} // <-- chiusura di initSpeech()
 
 </script>
+
+<!-- collegamento del bottone -->
+<script>
 document.getElementById("startMic").onclick = initSpeech;
-  </script>
-  
+</script>
+
 </body>
 </html>
-
