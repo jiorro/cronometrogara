@@ -64,21 +64,21 @@ function stopTimer() {
   const best = Math.min(...laps);
   const worst = Math.max(...laps);
 
-  if (muteMode) {
-    playSound("talkno.mp3");
+if (muteMode) {
+    setTimeout(() => playSound("talkno.mp3"), 200);
     log("Tempo: " + minutes + "m " + seconds + "s → silenzioso");
-  } else {
+} else {
     if (elapsed === best) {
-      playSound("Record (online-voice-recorder (1)).mp3");
-      log("Tempo: " + minutes + "m " + seconds + "s → giro migliore");
+        setTimeout(() => playSound("Record (online-voice-recorder (1)).mp3"), 200);
+        log("Tempo: " + minutes + "m " + seconds + "s → giro migliore");
     } else if (elapsed === worst) {
-      playSound("worst lap.mp3");
-      log("Tempo: " + minutes + "m " + seconds + "s → giro peggiore");
+        setTimeout(() => playSound("worst lap.mp3"), 200);
+        log("Tempo: " + minutes + "m " + seconds + "s → giro peggiore");
     } else {
-      playSound("normal lap time.mp3");
-      log("Tempo: " + minutes + "m " + seconds + "s → giro normale");
+        setTimeout(() => playSound("normal lap time.mp3"), 200);
+        log("Tempo: " + minutes + "m " + seconds + "s → giro normale");
     }
-  }
+}
 
   currentLap++; // 🔥 fondamentale
 
