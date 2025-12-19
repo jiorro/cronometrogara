@@ -26,7 +26,16 @@ let laps = [];
 let checkmarks = [];
 let checkmarkActive = true;
 let muteMode = false;
-let currentLap = 0; // 🔥 aggiunto
+let currentLap = 0;
+let audioPlaying = false;   // 🔥 evita loop microfono/audio
+
+// 🔥 funzione universale per riprodurre audio senza bloccare il mic
+function playSound(file) {
+  const s = new Audio(file);
+  audioPlaying = true;
+  s.onended = () => audioPlaying = false;
+  s.play();
+}
 
 function updateTimer() {
   const elapsed = Date.now() - startTime;
@@ -40,7 +49,7 @@ function startTimer() {
   startTime = Date.now();
   clearInterval(timerInterval);
   timerInterval = setInterval(updateTimer, 200);
-  new Audio("starttime (1).mp3").play();
+  playSound("starttime (1).mp3");
   log("Cronometro avviato");
 }
 
@@ -56,22 +65,22 @@ function stopTimer() {
   const worst = Math.max(...laps);
 
   if (muteMode) {
-    new Audio("talkno.mp3").play();
+    playSound("talkno.mp3");
     log("Tempo: " + minutes + "m " + seconds + "s → silenzioso");
   } else {
     if (elapsed === best) {
-      new Audio("Record (online-voice-recorder (1)).mp3").play(); // 🔥 parentesi corretta
+      playSound("Record (online-voice-recorder (1)).mp3");
       log("Tempo: " + minutes + "m " + seconds + "s → giro migliore");
     } else if (elapsed === worst) {
-      new Audio("worst lap.mp3").play();
+      playSound("worst lap.mp3");
       log("Tempo: " + minutes + "m " + seconds + "s → giro peggiore");
     } else {
-      new Audio("normal lap time.mp3").play();
+      playSound("normal lap time.mp3");
       log("Tempo: " + minutes + "m " + seconds + "s → giro normale");
     }
   }
 
-  currentLap++; // 🔥 aggiunto
+  currentLap++; // 🔥 fondamentale
 
   startTime = Date.now();
   timerInterval = setInterval(updateTimer, 200);
@@ -81,7 +90,7 @@ function markMoment() {
   const moment = Date.now() - startTime;
   checkmarks.push({time: moment, lastLapTriggered: -1});
   if (!muteMode) {
-    new Audio("remind next lap.mp3").play();
+    playSound("remind next lap.mp3");
   }
   log("Checkmark segnato a " + (moment/1000).toFixed(2) + "s");
 }
@@ -100,6 +109,7 @@ function initSpeech() {
   const recognition = new SpeechRecognition();
   recognition.lang = "it-IT";
   recognition.continuous = true;
+  recognition.interimResults = false; // 🔥 più stabile
 
   recognition.onresult = (event) => {
     const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
@@ -116,22 +126,25 @@ function initSpeech() {
     }
     else if (["stai zitto","silenzio","non parlare"].some(w => transcript.includes(w))) {
       muteMode = true;
-      new Audio("talkno.mp3").play();
+      playSound("talkno.mp3");
       log("Modalità silenziosa attivata");
     }
     else if (["parla ancora","riprendi voce","torna a parlare"].some(w => transcript.includes(w))) {
       muteMode = false;
-      new Audio("talk.mp3").play();
+      playSound("talk.mp3");
       log("Modalità parlante riattivata");
     }
     else {
-      new Audio("starttime (2).mp3").play();
+      playSound("starttime (2).mp3");
       log("Comando non riconosciuto");
     }
   };
 
+  // 🔥 evita loop ON/OFF del microfono
   recognition.onend = () => {
-    recognition.start();
+    if (!audioPlaying) {
+      setTimeout(() => recognition.start(), 300);
+    }
   };
 
   recognition.start();
@@ -148,7 +161,7 @@ setInterval(() => {
   checkmarks.forEach(mark => {
     if (!muteMode && mark.lastLapTriggered < currentLap) {
       if (Math.abs(elapsed - mark.time) < 300) {
-        new Audio("lap reminder_.mp3").play();
+        playSound("lap reminder_.mp3");
         mark.lastLapTriggered = currentLap;
       }
     }
