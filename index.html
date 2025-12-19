@@ -10,13 +10,13 @@
   </style>
 </head>
 <body>
-  <h1>Cronometro con comandi vocali</h1>
+  <h1>ingeniere di pista </h1>
   <div id="time">00:00.0</div>
-  <button id="startMic">Attiva microfono</button>
-  <p>comandi utilizzabili: per far cominciare il cronometro: tempo start via parti</p>
-  <p>comandi utilizzabili: per far terminare il cronometro: fine stop ferma chiudi</p>
-  <p>comandi utilizzabili: per segnare un momento sul cronometro: tieni ricorda segna mark</p>
-  <p>comandi utilizzabili: per gestire i checkmark: spegni checkmark, annulla checkmark, no checkmark, non tieni, annulla tieni, riprendi checkmark</p>
+  <button id="startMic">Attiva radio</button>
+  <p>comandi utilizzabili per far cominciare il cronometro: tempo start via parti</p>
+  <p>comandi utilizzabili per far terminare il cronometro: fine stop ferma chiudi</p>
+  <p>comandi utilizzabili per segnare un momento sul cronometro: tieni ricorda segna mark</p>
+  <p>comandi utilizzabili per gestire i checkmark: spegni checkmark, annulla checkmark, no checkmark, non tieni, annulla tieni, riprendi checkmark</p>
   <div id="log"></div>
 
 <script>
@@ -118,12 +118,12 @@ function initSpeech() {
       checkmarkActive = true;
       log("Reminder checkmark riattivato");
     }
-    else if (["stai zitto","silenzio","non parlare"].some(w => transcript.includes(w))) {
+    else if (["stai zitto","silenzio","non parlare", "zitto", "shhh", "if you talk whit me again i will disconnect the radio"].some(w => transcript.includes(w))) {
       muteMode = true;
       new Audio("talkno.mp3").play();
       log("Modalità silenziosa attivata");
     }
-    else if (["parla ancora","riprendi voce","torna a parlare"].some(w => transcript.includes(w))) {
+    else if (["parla ancora","riprendi voce","torna a parlare", "parla" "non stare zitto"].some(w => transcript.includes(w))) {
       muteMode = false;
       new Audio("talk.mp3").play();
       log("Modalità parlante riattivata");
