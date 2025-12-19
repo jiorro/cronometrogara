@@ -25,8 +25,8 @@ let timerInterval = null;
 let laps = [];
 let checkmarks = [];
 let checkmarkActive = true;
+let muteMode = false; // nuovo flag per modalità silenziosa
 
-// Aggiorna cronometro (minuti:secondi)
 function updateTimer() {
   const elapsed = Date.now() - startTime;
   const minutes = Math.floor(elapsed / 60000);
@@ -35,12 +35,11 @@ function updateTimer() {
     String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0");
 }
 
-// Avvia cronometro
 function startTimer() {
   startTime = Date.now();
   clearInterval(timerInterval);
   timerInterval = setInterval(updateTimer, 200);
-  new Audio("starttime (1).mp3").play(); // suono di avvio
+  new Audio("starttime (1).mp3").play();
   log("Cronometro avviato");
 }
 
@@ -55,36 +54,39 @@ function stopTimer() {
   const best = Math.min(...laps);
   const worst = Math.max(...laps);
 
-  if (elapsed === best) {
-    new Audio("Record (online-voice-recorder (1).mp3").play();
-    log("Tempo: " + minutes + "m " + seconds + "s → giro migliore");
-  } else if (elapsed === worst) {
-    new Audio("worst lap.mp3").play();
-    log("Tempo: " + minutes + "m " + seconds + "s → giro peggiore");
+  if (muteMode) {
+    new Audio("talkno.mp3").play(); // modalità silenziosa
+    log("Tempo: " + minutes + "m " + seconds + "s → silenzioso");
   } else {
-    new Audio("normal lap time.mp3").play();
-    log("Tempo: " + minutes + "m " + seconds + "s → giro normale");
+    if (elapsed === best) {
+      new Audio("Record (online-voice-recorder (1).mp3").play();
+      log("Tempo: " + minutes + "m " + seconds + "s → giro migliore");
+    } else if (elapsed === worst) {
+      new Audio("worst lap.mp3").play();
+      log("Tempo: " + minutes + "m " + seconds + "s → giro peggiore");
+    } else {
+      new Audio("normal lap time.mp3").play();
+      log("Tempo: " + minutes + "m " + seconds + "s → giro normale");
+    }
   }
 
-  // Riavvio cronometro SENZA suono di avvio
   startTime = Date.now();
   timerInterval = setInterval(updateTimer, 200);
 }
 
-// Segna momento speciale (checkmark)
 function markMoment() {
   const moment = Date.now() - startTime;
   checkmarks.push({time: moment, lastLapTriggered: -1});
-  new Audio("remind next lap.mp3").play(); // conferma segnalazione
+  if (!muteMode) {
+    new Audio("remind next lap.mp3").play();
+  }
   log("Checkmark segnato a " + (moment/1000).toFixed(2) + "s");
 }
 
-// Log
 function log(msg) {
   document.getElementById("log").innerHTML += msg + "<br>";
 }
 
-// Riconoscimento vocale
 function initSpeech() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
@@ -116,62 +118,39 @@ function initSpeech() {
       checkmarkActive = true;
       log("Reminder checkmark riattivato");
     }
-  };
-
-  recognition.start();
-function initSpeech() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    alert("Il tuo browser non supporta SpeechRecognition.");
-    return;
-  }
-
-  const recognition = new SpeechRecognition();
-  recognition.lang = "it-IT";
-  recognition.continuous = true;
-
-  recognition.onresult = (event) => {
-    const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
-    log("Comando: " + transcript);
-
-    if (["tempo","start","via","parti"].some(w => transcript.includes(w))) {
-      startTimer();
+    else if (["stai zitto","silenzio","non parlare"].some(w => transcript.includes(w))) {
+      muteMode = true;
+      new Audio("talkno.mp3").play();
+      log("Modalità silenziosa attivata");
     }
-    else if (["fine","stop","ferma","chiudi"].some(w => transcript.includes(w))) {
-      stopTimer();
+    else if (["parla ancora","riprendi voce","torna a parlare"].some(w => transcript.includes(w))) {
+      muteMode = false;
+      new Audio("talk.mp3").play();
+      log("Modalità parlante riattivata");
     }
-    else if (["tieni","ricorda","segna","mark"].some(w => transcript.includes(w))) {
-      markMoment();
-    }
-    else if (["spegni checkmark","annulla checkmark","no checkmark","non tieni","annulla tieni"].some(w => transcript.includes(w))) {
-      checkmarkActive = false;
-      log("Reminder checkmark in pausa");
-    }
-    else if (["riprendi checkmark","attiva checkmark","riattiva checkmark"].some(w => transcript.includes(w))) {
-      checkmarkActive = true;
-      log("Reminder checkmark riattivato");
+    else {
+      // comando non riconosciuto
+      new Audio("starttime (2).mp3").play();
+      log("Comando non riconosciuto");
     }
   };
 
-  // Riattiva automaticamente se il microfono si chiude
   recognition.onend = () => {
     recognition.start();
   };
 
   recognition.start();
-}
 
-  // Controllo continuo dei checkmark
   setInterval(() => {
-    if (checkmarkActive && checkmarks.length > 0 && startTime) {
+    if (checkmarkActive && checkmarks.length > 0 && startTime && !muteMode) {
       const elapsed = Date.now() - startTime;
       const currentLap = laps.length;
 
       checkmarks.forEach(mark => {
         if (mark.lastLapTriggered < currentLap) {
-          if (Math.abs(elapsed - mark.time) < 300) { // tolleranza 0.3s
+          if (Math.abs(elapsed - mark.time) < 300) {
             new Audio("lap reminder_.mp3").play();
-            mark.lastLapTriggered = currentLap; // suona una sola volta per giro
+            mark.lastLapTriggered = currentLap;
           }
         }
       });
@@ -181,6 +160,7 @@ function initSpeech() {
 
 document.getElementById("startMic").onclick = initSpeech;
 </script>
+
 </body>
 </html>
 
