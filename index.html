@@ -118,18 +118,18 @@ function initSpeech() {
     if (["tempo","start","via","parti"].some(w => transcript.includes(w))) {
       startTimer();
     }
-    else if (["fine","stop","ferma","chiudi"].some(w => transcript.includes(w))) {
+    else if (["fine","stop","ferma","chiudi", "end"].some(w => transcript.includes(w))) {
       stopTimer();
     }
     else if (["tieni","ricorda","segna","mark"].some(w => transcript.includes(w))) {
       markMoment();
     }
-    else if (["stai zitto","silenzio","non parlare"].some(w => transcript.includes(w))) {
+    else if (["stai zitto","silenzio","non parlare", "zitto", "if you talk whit mw again i will disconnect the radio"].some(w => transcript.includes(w))) {
       muteMode = true;
       playSound("talkno.mp3");
       log("Modalità silenziosa attivata");
     }
-    else if (["parla ancora","riprendi voce","torna a parlare"].some(w => transcript.includes(w))) {
+    else if (["parla ancora","riprendi voce","torna a parlare", "parla", "cazzo"].some(w => transcript.includes(w))) {
       muteMode = false;
       playSound("talk.mp3");
       log("Modalità parlante riattivata");
