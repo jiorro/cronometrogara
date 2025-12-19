@@ -68,7 +68,7 @@ if (muteMode) {
     setTimeout(() => playSound("talkno.mp3"), 200);
     log("Tempo: " + minutes + "m " + seconds + "s → silenzioso");
 } else {
-    if (elapsed === best) {
+   if (elapsed <= best) {
         setTimeout(() => playSound("Record (online-voice-recorder (1)).mp3"), 200);
         log("Tempo: " + minutes + "m " + seconds + "s → giro migliore");
     } else if (elapsed === worst) {
