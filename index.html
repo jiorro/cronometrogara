@@ -28,6 +28,7 @@
   <p>comandi per avviare: tempo, start, via, parti</p>
   <p>comandi per fermare: fine, stop, ferma, chiudi</p>
   <p>comandi per segnare: tieni, ricorda, segna, mark</p>
+  <p>comandi per gestire il silenzio: silenzio, stai zitto, non parlare, mute radio</p>
 
   <div id="log"></div>
   <div id="lapCounter">Giro: 0</div>
@@ -52,8 +53,8 @@ function playSound(file) {
   const s = new Audio(file);
   audioPlaying = true;
 
-  s.onended = () => audioPlaying = false;
-  s.onerror = () => audioPlaying = false;
+  s.onended = () => { audioPlaying = false; };
+  s.onerror = () => { audioPlaying = false; };
 
   s.play();
 }
@@ -62,6 +63,7 @@ function playSound(file) {
    TIMER
 ------------------------- */
 function updateTimer() {
+  if (startTime === null) return;
   const elapsed = Date.now() - startTime;
   const minutes = Math.floor(elapsed / 60000);
   const seconds = Math.floor((elapsed % 60000) / 1000);
@@ -82,15 +84,19 @@ function startTimer() {
 
 function stopTimer() {
   clearInterval(timerInterval);
+  if (startTime === null) return;
 
   const elapsed = Date.now() - startTime;
+
+  // best/worst calcolati PRIMA di aggiungere il giro attuale
+  const hadLapsBefore = laps.length > 0;
+  const bestBefore = hadLapsBefore ? Math.min(...laps) : Infinity;
+  const worstBefore = hadLapsBefore ? Math.max(...laps) : -Infinity;
+
   laps.push(elapsed);
 
   const minutes = Math.floor(elapsed / 60000);
   const seconds = ((elapsed % 60000) / 1000).toFixed(2);
-
-  const best = Math.min(...laps);
-  const worst = Math.max(...laps);
 
   currentLap++;
   updateLapCounter();
@@ -99,10 +105,11 @@ function stopTimer() {
     setTimeout(() => playSound("talkno.mp3"), 200);
     log(`Tempo: ${minutes}m ${seconds}s → silenzioso`);
   } else {
-    if (elapsed <= best) {
-      setTimeout(() => playSound("Record (online-voice-recorder (1)).mp3"), 200);
+    if (!hadLapsBefore || elapsed <= bestBefore) {
+      // primo giro o migliore dei precedenti
+      setTimeout(() => playSound("Record (online-voice-recorder (1).mp3"), 200);
       log(`Tempo: ${minutes}m ${seconds}s → giro migliore`);
-    } else if (elapsed === worst) {
+    } else if (elapsed >= worstBefore) {
       setTimeout(() => playSound("worst lap.mp3"), 200);
       log(`Tempo: ${minutes}m ${seconds}s → giro peggiore`);
     } else {
@@ -111,13 +118,16 @@ function stopTimer() {
     }
   }
 
-  // Il cronometro NON riparte automaticamente
+  // il cronometro ricomincia subito da zero
+  startTime = Date.now();
+  timerInterval = setInterval(updateTimer, 200);
 }
 
 /* -------------------------
    CHECKMARK
 ------------------------- */
 function markMoment() {
+  if (startTime === null) return;
   const moment = Date.now() - startTime;
   checkmarks.push({ time: moment, lastLapTriggered: -1 });
 
@@ -137,7 +147,7 @@ function log(msg) {
    MICROFONO
 ------------------------- */
 function initSpeech() {
-  if (micStarted) return;  // evita più microfoni
+  if (micStarted) return;  // evita più istanze di riconoscimento
   micStarted = true;
 
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -198,7 +208,7 @@ function updateLapCounter() {
    CHECKMARK REMINDER
 ------------------------- */
 setInterval(() => {
-  if (!startTime) return;
+  if (startTime === null) return;
 
   const elapsed = Date.now() - startTime;
 
@@ -216,4 +226,3 @@ setInterval(() => {
 
 </body>
 </html>
-
