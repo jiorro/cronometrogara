@@ -2,11 +2,18 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>connessione box</title>
+  </title>box</title>
   <style>
     body { font-family: Arial; text-align: center; margin-top: 40px; }
     #time { font-size: 2em; margin: 20px; }
     #log { text-align: left; margin: 20px auto; width: 60%; }
+      #lapCounter {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      font-size: 1.2em;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -18,6 +25,7 @@
   <p>comandi utilizzabili per segnare un momento sul cronometro: tieni ricorda segna mark</p>
   <p>comandi utilizzabili per gestire i checkmark: spegni checkmark, annulla checkmark, no checkmark, non tieni, annulla tieni, riprendi checkmark</p>
   <div id="log"></div>
+  <div id="lapCounter">Giro: 0</div>
 
 <script>
 let startTime = null;
@@ -63,6 +71,8 @@ function stopTimer() {
 
   const best = Math.min(...laps);
   const worst = Math.max(...laps);
+  currentLap++; // 🔥 fondamentale
+  updateLapCounter();
 
 if (muteMode) {
     setTimeout(() => playSound("talkno.mp3"), 200);
@@ -157,6 +167,10 @@ recognition.onresult = (event) => {
 
   recognition.start();
 }
+function updateLapCounter() {
+  document.getElementById("lapCounter").textContent = "Giro: " + currentLap;
+}
+
 
 document.getElementById("startMic").onclick = initSpeech;
 
@@ -174,7 +188,6 @@ setInterval(() => {
       }
     }
   });
-}, 200);
 
 </script>
 
