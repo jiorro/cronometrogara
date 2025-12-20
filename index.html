@@ -2,12 +2,13 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  </title>box</title>
+  <title>box</title>
+
   <style>
     body { font-family: Arial; text-align: center; margin-top: 40px; }
     #time { font-size: 2em; margin: 20px; }
     #log { text-align: left; margin: 20px auto; width: 60%; }
-      #lapCounter {
+    #lapCounter {
       position: absolute;
       top: 10px;
       right: 20px;
@@ -16,53 +17,72 @@
     }
   </style>
 </head>
+
 <body>
+
   <h1>ingeniere live</h1>
+
   <div id="time">00:00.000</div>
   <button id="startMic">Attiva radio</button>
-  <p>comandi utilizzabili per far cominciare il cronometro: tempo start via parti</p>
-  <p>comandi utilizzabili per far terminare il cronometro: fine stop ferma chiudi</p>
-  <p>comandi utilizzabili per segnare un momento sul cronometro: tieni ricorda segna mark</p>
-  <p>comandi utilizzabili per gestire i checkmark: spegni checkmark, annulla checkmark, no checkmark, non tieni, annulla tieni, riprendi checkmark</p>
+
+  <p>comandi per avviare: tempo, start, via, parti</p>
+  <p>comandi per fermare: fine, stop, ferma, chiudi</p>
+  <p>comandi per segnare: tieni, ricorda, segna, mark</p>
+
   <div id="log"></div>
   <div id="lapCounter">Giro: 0</div>
 
 <script>
+/* -------------------------
+   VARIABILI PRINCIPALI
+------------------------- */
 let startTime = null;
 let timerInterval = null;
 let laps = [];
 let checkmarks = [];
-let checkmarkActive = true;
 let muteMode = false;
 let currentLap = 0;
-let audioPlaying = false;   // 🔥 evita loop microfono/audio
+let audioPlaying = false;
+let micStarted = false;
 
-// 🔥 funzione universale per riprodurre audio senza bloccare il mic
+/* -------------------------
+   AUDIO SICURO
+------------------------- */
 function playSound(file) {
   const s = new Audio(file);
   audioPlaying = true;
+
   s.onended = () => audioPlaying = false;
+  s.onerror = () => audioPlaying = false;
+
   s.play();
 }
 
+/* -------------------------
+   TIMER
+------------------------- */
 function updateTimer() {
   const elapsed = Date.now() - startTime;
   const minutes = Math.floor(elapsed / 60000);
   const seconds = Math.floor((elapsed % 60000) / 1000);
+
   document.getElementById("time").textContent =
-    String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0");
+    String(minutes).padStart(2, "0") + ":" +
+    String(seconds).padStart(2, "0");
 }
 
 function startTimer() {
   startTime = Date.now();
   clearInterval(timerInterval);
   timerInterval = setInterval(updateTimer, 200);
+
   playSound("starttime (1).mp3");
   log("Cronometro avviato");
 }
 
 function stopTimer() {
   clearInterval(timerInterval);
+
   const elapsed = Date.now() - startTime;
   laps.push(elapsed);
 
@@ -71,45 +91,55 @@ function stopTimer() {
 
   const best = Math.min(...laps);
   const worst = Math.max(...laps);
-  currentLap++; // 🔥 fondamentale
+
+  currentLap++;
   updateLapCounter();
 
-if (muteMode) {
+  if (muteMode) {
     setTimeout(() => playSound("talkno.mp3"), 200);
-    log("Tempo: " + minutes + "m " + seconds + "s → silenzioso");
-} else {
-   if (elapsed <= best) {
-        setTimeout(() => playSound("Record (online-voice-recorder (1)).mp3"), 200);
-        log("Tempo: " + minutes + "m " + seconds + "s → giro migliore");
+    log(`Tempo: ${minutes}m ${seconds}s → silenzioso`);
+  } else {
+    if (elapsed <= best) {
+      setTimeout(() => playSound("Record (online-voice-recorder (1)).mp3"), 200);
+      log(`Tempo: ${minutes}m ${seconds}s → giro migliore`);
     } else if (elapsed === worst) {
-        setTimeout(() => playSound("worst lap.mp3"), 200);
-        log("Tempo: " + minutes + "m " + seconds + "s → giro peggiore");
+      setTimeout(() => playSound("worst lap.mp3"), 200);
+      log(`Tempo: ${minutes}m ${seconds}s → giro peggiore`);
     } else {
-        setTimeout(() => playSound("normal lap time.mp3"), 200);
-        log("Tempo: " + minutes + "m " + seconds + "s → giro normale");
+      setTimeout(() => playSound("normal lap time.mp3"), 200);
+      log(`Tempo: ${minutes}m ${seconds}s → giro normale`);
     }
+  }
+
+  // Il cronometro NON riparte automaticamente
 }
 
-  currentLap++; // 🔥 fondamentale
-
-  startTime = Date.now();
-  timerInterval = setInterval(updateTimer, 200);
-}
-
+/* -------------------------
+   CHECKMARK
+------------------------- */
 function markMoment() {
   const moment = Date.now() - startTime;
-  checkmarks.push({time: moment, lastLapTriggered: -1});
-  if (!muteMode) {
-    playSound("remind next lap.mp3");
-  }
-  log("Checkmark segnato a " + (moment/1000).toFixed(2) + "s");
+  checkmarks.push({ time: moment, lastLapTriggered: -1 });
+
+  if (!muteMode) playSound("remind next lap.mp3");
+
+  log("Checkmark a " + (moment / 1000).toFixed(2) + "s");
 }
 
+/* -------------------------
+   LOG
+------------------------- */
 function log(msg) {
   document.getElementById("log").innerHTML += msg + "<br>";
 }
 
+/* -------------------------
+   MICROFONO
+------------------------- */
 function initSpeech() {
+  if (micStarted) return;  // evita più microfoni
+  micStarted = true;
+
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
     alert("Il tuo browser non supporta SpeechRecognition.");
@@ -119,46 +149,33 @@ function initSpeech() {
   const recognition = new SpeechRecognition();
   recognition.lang = "it-IT";
   recognition.continuous = true;
-  recognition.interimResults = false; // 🔥 più stabile
+  recognition.interimResults = false;
 
-recognition.onresult = (event) => {
+  recognition.onresult = (event) => {
     const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
     log("Comando: " + transcript);
 
-    // 🔥 IGNORA SILENZIO, RUMORE, PAROLE MONCHE
-    if (transcript.trim() === "" || transcript.length < 2) {
-        return;
-    }
+    if (transcript.length < 2) return;
 
     if (["tempo","start","via","parti"].some(w => transcript.includes(w))) {
-        startTimer();
+      startTimer();
     }
     else if (["fine","stop","ferma","chiudi","end"].some(w => transcript.includes(w))) {
-        stopTimer();
+      stopTimer();
     }
     else if (["tieni","ricorda","segna","mark"].some(w => transcript.includes(w))) {
-        markMoment();
+      markMoment();
     }
-    else if ([
-        "stai zitto",
-        "silenzio",
-        "non parlare",
-        "zitto",
-        "radio off",
-        "mute radio",
-        "silenzio radio"
-    ].some(w => transcript.includes(w))) {
-        muteMode = true;
-        playSound("talkno.mp3");
-        log("Modalità silenziosa attivata");
+    else if (["silenzio","stai zitto","non parlare","mute radio"].some(w => transcript.includes(w))) {
+      muteMode = true;
+      playSound("talkno.mp3");
+      log("Modalità silenziosa attivata");
     }
     else {
-        log("Comando ignorato");
+      log("Comando ignorato");
     }
-};
+  };
 
-
-  // 🔥 evita loop ON/OFF del microfono
   recognition.onend = () => {
     if (!audioPlaying) {
       setTimeout(() => recognition.start(), 300);
@@ -167,14 +184,19 @@ recognition.onresult = (event) => {
 
   recognition.start();
 }
+
+document.getElementById("startMic").onclick = initSpeech;
+
+/* -------------------------
+   COUNTER GIRI
+------------------------- */
 function updateLapCounter() {
   document.getElementById("lapCounter").textContent = "Giro: " + currentLap;
 }
 
-
-document.getElementById("startMic").onclick = initSpeech;
-
-// 🔥 BLOCCO CHECKMARK CORRETTO
+/* -------------------------
+   CHECKMARK REMINDER
+------------------------- */
 setInterval(() => {
   if (!startTime) return;
 
@@ -188,6 +210,7 @@ setInterval(() => {
       }
     }
   });
+}, 200);
 
 </script>
 
