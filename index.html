@@ -8,6 +8,16 @@
     body { font-family: Arial; text-align: center; margin-top: 40px; }
     #time { font-size: 2em; margin: 20px; }
     #log { text-align: left; margin: 20px auto; width: 60%; }
+
+    /* TIMER TOTALE IN ALTO A SINISTRA */
+    #totalTime {
+      position: absolute;
+      top: 10px;
+      left: 20px;
+      font-size: 1.2em;
+      font-weight: bold;
+    }
+
     #lapCounter {
       position: absolute;
       top: 10px;
@@ -22,13 +32,9 @@
 
   <h1>ingeniere live</h1>
 
+  <div id="totalTime">Totale: 00:00.000</div>
   <div id="time">00:00.000</div>
   <button id="startMic">Attiva radio</button>
-
-  <p>comandi per avviare: tempo, start, via, parti</p>
-  <p>comandi per fermare: fine, stop, ferma, chiudi</p>
-  <p>comandi per segnare: tieni, ricorda, segna, mark</p>
-  <p>comandi per gestire il silenzio: silenzio, stai zitto, non parlare, mute radio</p>
 
   <div id="log"></div>
   <div id="lapCounter">Giro: 0</div>
@@ -38,7 +44,10 @@
    VARIABILI PRINCIPALI
 ------------------------- */
 let startTime = null;
+let totalStartTime = null;   // 🔥 parte dal primo via
 let timerInterval = null;
+let totalTimerInterval = null;
+
 let laps = [];
 let checkmarks = [];
 let muteMode = false;
@@ -53,14 +62,14 @@ function playSound(file) {
   const s = new Audio(file);
   audioPlaying = true;
 
-  s.onended = () => { audioPlaying = false; };
-  s.onerror = () => { audioPlaying = false; };
+  s.onended = () => audioPlaying = false;
+  s.onerror = () => audioPlaying = false;
 
   s.play();
 }
 
 /* -------------------------
-   TIMER
+   TIMER NORMALE
 ------------------------- */
 function updateTimer() {
   if (startTime === null) return;
@@ -73,7 +82,33 @@ function updateTimer() {
     String(seconds).padStart(2, "0");
 }
 
+/* -------------------------
+   TIMER TOTALE
+------------------------- */
+function updateTotalTimer() {
+  if (totalStartTime === null) return;
+  const elapsed = Date.now() - totalStartTime;
+
+  const minutes = Math.floor(elapsed / 60000);
+  const seconds = Math.floor((elapsed % 60000) / 1000);
+  const millis = Math.floor(elapsed % 1000);
+
+  document.getElementById("totalTime").textContent =
+    "Totale: " +
+    String(minutes).padStart(2, "0") + ":" +
+    String(seconds).padStart(2, "0") + "." +
+    String(millis).padStart(3, "0");
+}
+
+/* -------------------------
+   AVVIO TIMER
+------------------------- */
 function startTimer() {
+  if (totalStartTime === null) {
+    totalStartTime = Date.now();
+    totalTimerInterval = setInterval(updateTotalTimer, 100);
+  }
+
   startTime = Date.now();
   clearInterval(timerInterval);
   timerInterval = setInterval(updateTimer, 200);
@@ -82,13 +117,15 @@ function startTimer() {
   log("Cronometro avviato");
 }
 
+/* -------------------------
+   STOP TIMER (E RIPARTE)
+------------------------- */
 function stopTimer() {
   clearInterval(timerInterval);
   if (startTime === null) return;
 
   const elapsed = Date.now() - startTime;
 
-  // best/worst calcolati PRIMA di aggiungere il giro attuale
   const hadLapsBefore = laps.length > 0;
   const bestBefore = hadLapsBefore ? Math.min(...laps) : Infinity;
   const worstBefore = hadLapsBefore ? Math.max(...laps) : -Infinity;
@@ -106,7 +143,6 @@ function stopTimer() {
     log(`Tempo: ${minutes}m ${seconds}s → silenzioso`);
   } else {
     if (!hadLapsBefore || elapsed <= bestBefore) {
-      // primo giro o migliore dei precedenti
       setTimeout(() => playSound("Record (online-voice-recorder (1).mp3"), 200);
       log(`Tempo: ${minutes}m ${seconds}s → giro migliore`);
     } else if (elapsed >= worstBefore) {
@@ -118,7 +154,7 @@ function stopTimer() {
     }
   }
 
-  // il cronometro ricomincia subito da zero
+  // 🔥 RIPARTE SUBITO
   startTime = Date.now();
   timerInterval = setInterval(updateTimer, 200);
 }
@@ -144,10 +180,19 @@ function log(msg) {
 }
 
 /* -------------------------
+   VOCE ROBOTICA
+------------------------- */
+function speak(text) {
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = "it-IT";
+  speechSynthesis.speak(utter);
+}
+
+/* -------------------------
    MICROFONO
 ------------------------- */
 function initSpeech() {
-  if (micStarted) return;  // evita più istanze di riconoscimento
+  if (micStarted) return;
   micStarted = true;
 
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -160,31 +205,46 @@ function initSpeech() {
   recognition.lang = "it-IT";
   recognition.continuous = true;
   recognition.interimResults = false;
-
-  recognition.onresult = (event) => {
+recognition.onresult = (event) => {
     const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
     log("Comando: " + transcript);
 
     if (transcript.length < 2) return;
 
     if (["tempo","start","via","parti"].some(w => transcript.includes(w))) {
-      startTimer();
+        startTimer();
     }
     else if (["fine","stop","ferma","chiudi","end"].some(w => transcript.includes(w))) {
-      stopTimer();
+        stopTimer();
     }
     else if (["tieni","ricorda","segna","mark"].some(w => transcript.includes(w))) {
-      markMoment();
+        markMoment();
     }
     else if (["silenzio","stai zitto","non parlare","mute radio"].some(w => transcript.includes(w))) {
-      muteMode = true;
-      playSound("talkno.mp3");
-      log("Modalità silenziosa attivata");
+        muteMode = true;
+        playSound("talkno.mp3");
+        log("Modalità silenziosa attivata");
+    }
+    else if (["tempo totale","totale","tempo gara","tempo completo"].some(w => transcript.includes(w))) {
+        const elapsed = Date.now() - totalStartTime;
+        const minutes = Math.floor(elapsed / 60000);
+        const seconds = Math.floor((elapsed % 60000) / 1000);
+
+        const text = `Sono passati ${minutes} minuti e ${seconds} secondi.`;
+        speak(text);
+        log("Tempo totale richiesto → " + text);
+    }
+    else if (["giro","giri","quanti giri","numero giri","giri totali","totale giri"]
+             .some(w => transcript.includes(w))) {
+
+        const text = `Hai completato ${currentLap} giri.`;
+        speak(text);
+        log("Richiesta giri → " + text);
     }
     else {
-      log("Comando ignorato");
+        log("Comando ignorato");
     }
-  };
+};
 
   recognition.onend = () => {
     if (!audioPlaying) {
