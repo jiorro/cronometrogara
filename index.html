@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>box live</title>
+  <title>connessione box</title>
   <style>
     body { font-family: Arial; text-align: center; margin-top: 40px; }
     #time { font-size: 2em; margin: 20px; }
@@ -10,7 +10,7 @@
   </style>
 </head>
 <body>
-  <h1>ingeniere di pista </h1>
+  <h1>ingeniere live</h1>
   <div id="time">00:00.000</div>
   <button id="startMic">Attiva radio</button>
   <p>comandi utilizzabili per far cominciare il cronometro: tempo start via parti</p>
@@ -111,38 +111,42 @@ function initSpeech() {
   recognition.continuous = true;
   recognition.interimResults = false; // 🔥 più stabile
 
-  recognition.onresult = (event) => {
+recognition.onresult = (event) => {
     const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
     log("Comando: " + transcript);
-   // 🔥 IGNORA SILENZIO, RUMORE, RESIDUI
-   if (transcript.trim() === "" || transcript.length < 2) {
-    return; // non fare nulla
-   }
+
+    // 🔥 IGNORA SILENZIO, RUMORE, PAROLE MONCHE
+    if (transcript.trim() === "" || transcript.length < 2) {
+        return;
+    }
 
     if (["tempo","start","via","parti"].some(w => transcript.includes(w))) {
-      startTimer();
+        startTimer();
     }
-    else if (["fine","stop","ferma","chiudi", "end"].some(w => transcript.includes(w))) {
-      stopTimer();
+    else if (["fine","stop","ferma","chiudi","end"].some(w => transcript.includes(w))) {
+        stopTimer();
     }
     else if (["tieni","ricorda","segna","mark"].some(w => transcript.includes(w))) {
-      markMoment();
+        markMoment();
     }
-    else if (["stai zitto","silenzio","non parlare", "zitto", "if you talk whit me again i will disconnect the radio", "shut up", "sconnetti radio" "silenzio radio"].some(w => transcript.includes(w))) {
-      muteMode = true;
-      playSound("talkno.mp3");
-      log("Modalità silenziosa attivata");
-    }
-    else if (["parla ancora","riprendi voce","torna a parlare", "parla", "cazzo"].some(w => transcript.includes(w))) {
-      muteMode = false;
-      playSound("talk.mp3");
-      log("Modalità parlante riattivata");
+    else if ([
+        "stai zitto",
+        "silenzio",
+        "non parlare",
+        "zitto",
+        "radio off",
+        "mute radio",
+        "silenzio radio"
+    ].some(w => transcript.includes(w))) {
+        muteMode = true;
+        playSound("talkno.mp3");
+        log("Modalità silenziosa attivata");
     }
     else {
-      playSound("starttime (2).mp3");
-      log("Comando non riconosciuto");
+        log("Comando ignorato");
     }
-  };
+};
+
 
   // 🔥 evita loop ON/OFF del microfono
   recognition.onend = () => {
