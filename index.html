@@ -1,286 +1,378 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8">
-  <title>box</title>
+<meta charset="UTF-8">
+<title>Race Engineer</title>
 
-  <style>
-    body { font-family: Arial; text-align: center; margin-top: 40px; }
-    #time { font-size: 2em; margin: 20px; }
-    #log { text-align: left; margin: 20px auto; width: 60%; }
+<style>
 
-    /* TIMER TOTALE IN ALTO A SINISTRA */
-    #totalTime {
-      position: absolute;
-      top: 10px;
-      left: 20px;
-      font-size: 1.2em;
-      font-weight: bold;
-    }
+body{
+    background:#0f1116;
+    color:white;
+    font-family:Arial;
+    text-align:center;
+}
 
-    #lapCounter {
-      position: absolute;
-      top: 10px;
-      right: 20px;
-      font-size: 1.2em;
-      font-weight: bold;
-    }
-  </style>
+h1{
+    margin-top:20px;
+    color:#00ff9c;
+}
+
+#time{
+    font-size:80px;
+    margin:30px;
+    font-weight:bold;
+}
+
+#totalTime{
+    position:absolute;
+    left:20px;
+    top:20px;
+    font-size:18px;
+}
+
+#lapCounter{
+    position:absolute;
+    right:20px;
+    top:20px;
+    font-size:18px;
+}
+
+button{
+    padding:12px 25px;
+    font-size:16px;
+    background:#00ff9c;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+}
+
+button:hover{
+    background:#00cc7a;
+}
+
+#log{
+    margin:40px auto;
+    width:70%;
+    background:#161a22;
+    padding:20px;
+    border-radius:10px;
+    text-align:left;
+    height:200px;
+    overflow:auto;
+}
+
+</style>
 </head>
 
 <body>
 
-  <h1>ingeniere live</h1>
+<h1>Race Engineer</h1>
 
-  <div id="totalTime">Totale: 00:00.000</div>
-  <div id="time">00:00.000</div>
-  <button id="startMic">Attiva radio</button>
+<div id="totalTime">Total: 00:00.000</div>
+<div id="lapCounter">Lap: 0</div>
 
-  <div id="log"></div>
-  <div id="lapCounter">Giro: 0</div>
+<div id="time">00:00.000</div>
+
+<button id="startMic">🎤 Attiva Microfono</button>
+
+<div id="log"></div>
 
 <script>
-/* -------------------------
-   VARIABILI PRINCIPALI
-------------------------- */
-let startTime = null;
-let totalStartTime = null;   // 🔥 parte dal primo via
-let timerInterval = null;
-let totalTimerInterval = null;
 
-let laps = [];
-let checkmarks = [];
-let muteMode = false;
-let currentLap = 0;
-let audioPlaying = false;
-let micStarted = false;
+let startTime=null
+let totalStartTime=null
 
-/* -------------------------
-   AUDIO SICURO
-------------------------- */
-function playSound(file) {
-  const s = new Audio(file);
-  audioPlaying = true;
+let timerInterval=null
+let totalTimerInterval=null
 
-  s.onended = () => audioPlaying = false;
-  s.onerror = () => audioPlaying = false;
+let laps=[]
+let checkmarks=[]
 
-  s.play();
+let muteMode=false
+let currentLap=0
+
+let micStarted=false
+let audioPlaying=false
+let firstReminderDone=false
+
+
+function playSound(file){
+
+ const s=new Audio(file)
+
+ audioPlaying=true
+
+ s.onended=()=>audioPlaying=false
+ s.onerror=()=>audioPlaying=false
+
+ s.play().catch(()=>audioPlaying=false)
+
 }
 
-/* -------------------------
-   TIMER NORMALE
-------------------------- */
-function updateTimer() {
-  if (startTime === null) return;
-  const elapsed = Date.now() - startTime;
-  const minutes = Math.floor(elapsed / 60000);
-  const seconds = Math.floor((elapsed % 60000) / 1000);
 
-  document.getElementById("time").textContent =
-    String(minutes).padStart(2, "0") + ":" +
-    String(seconds).padStart(2, "0");
+function updateTimer(){
+
+ if(startTime===null)return
+
+ const elapsed=Date.now()-startTime
+
+ const m=Math.floor(elapsed/60000)
+ const s=Math.floor((elapsed%60000)/1000)
+ const ms=Math.floor(elapsed%1000)
+
+ document.getElementById("time").textContent=
+
+ String(m).padStart(2,"0")+":"+
+ String(s).padStart(2,"0")+"."+
+ String(ms).padStart(3,"0")
+
 }
 
-/* -------------------------
-   TIMER TOTALE
-------------------------- */
-function updateTotalTimer() {
-  if (totalStartTime === null) return;
-  const elapsed = Date.now() - totalStartTime;
 
-  const minutes = Math.floor(elapsed / 60000);
-  const seconds = Math.floor((elapsed % 60000) / 1000);
-  const millis = Math.floor(elapsed % 1000);
+function updateTotalTimer(){
 
-  document.getElementById("totalTime").textContent =
-    "Totale: " +
-    String(minutes).padStart(2, "0") + ":" +
-    String(seconds).padStart(2, "0") + "." +
-    String(millis).padStart(3, "0");
+ if(totalStartTime===null)return
+
+ const elapsed=Date.now()-totalStartTime
+
+ const m=Math.floor(elapsed/60000)
+ const s=Math.floor((elapsed%60000)/1000)
+ const ms=Math.floor(elapsed%1000)
+
+ document.getElementById("totalTime").textContent=
+ "Total: "+String(m).padStart(2,"0")+":"+
+ String(s).padStart(2,"0")+"."+
+ String(ms).padStart(3,"0")
+
 }
 
-/* -------------------------
-   AVVIO TIMER
-------------------------- */
-function startTimer() {
-  if (totalStartTime === null) {
-    totalStartTime = Date.now();
-    totalTimerInterval = setInterval(updateTotalTimer, 100);
-  }
 
-  startTime = Date.now();
-  clearInterval(timerInterval);
-  timerInterval = setInterval(updateTimer, 200);
+function startTimer(){
 
-  playSound("starttime (1).mp3");
-  log("Cronometro avviato");
+ if(totalStartTime===null){
+
+ totalStartTime=Date.now()
+
+ totalTimerInterval=setInterval(updateTotalTimer,100)
+
+ }
+
+ startTime=Date.now()
+
+ clearInterval(timerInterval)
+ timerInterval=setInterval(updateTimer,100)
+
+ playSound("starttime (1).mp3")
+
+ log("Timer started")
+
 }
 
-/* -------------------------
-   STOP TIMER (E RIPARTE)
-------------------------- */
-function stopTimer() {
-  clearInterval(timerInterval);
-  if (startTime === null) return;
 
-  const elapsed = Date.now() - startTime;
+function stopTimer(){
 
-  const hadLapsBefore = laps.length > 0;
-  const bestBefore = hadLapsBefore ? Math.min(...laps) : Infinity;
-  const worstBefore = hadLapsBefore ? Math.max(...laps) : -Infinity;
+ if(startTime===null)return
 
-  laps.push(elapsed);
+ clearInterval(timerInterval)
 
-  const minutes = Math.floor(elapsed / 60000);
-  const seconds = ((elapsed % 60000) / 1000).toFixed(2);
+ const elapsed=Date.now()-startTime
 
-  currentLap++;
-  updateLapCounter();
+ const hadLaps=laps.length>0
 
-  if (muteMode) {
-    setTimeout(() => playSound("talkno.mp3"), 200);
-    log(`Tempo: ${minutes}m ${seconds}s → silenzioso`);
-  } else {
-    if (!hadLapsBefore || elapsed <= bestBefore) {
-      setTimeout(() => playSound("Record (online-voice-recorder (1).mp3"), 200);
-      log(`Tempo: ${minutes}m ${seconds}s → giro migliore`);
-    } else if (elapsed >= worstBefore) {
-      setTimeout(() => playSound("worst lap.mp3"), 200);
-      log(`Tempo: ${minutes}m ${seconds}s → giro peggiore`);
-    } else {
-      setTimeout(() => playSound("normal lap time.mp3"), 200);
-      log(`Tempo: ${minutes}m ${seconds}s → giro normale`);
-    }
-  }
+ const best=hadLaps?Math.min(...laps):Infinity
+ const worst=hadLaps?Math.max(...laps):-Infinity
 
-  // 🔥 RIPARTE SUBITO
-  startTime = Date.now();
-  timerInterval = setInterval(updateTimer, 200);
+ laps.push(elapsed)
+
+ const m=Math.floor(elapsed/60000)
+ const s=((elapsed%60000)/1000).toFixed(2)
+
+ currentLap++
+ updateLapCounter()
+
+ if(!muteMode){
+
+ if(!hadLaps || elapsed<=best){
+
+ setTimeout(()=>playSound("Record (online-voice-recorder (1).mp3"),200)
+ log(`Best lap ${m}m ${s}s`)
+
+ }
+ else if(elapsed>=worst){
+
+ setTimeout(()=>playSound("worst lap.mp3"),200)
+ log(`Worst lap ${m}m ${s}s`)
+
+ }
+ else{
+
+ setTimeout(()=>playSound("normal lap time.mp3"),200)
+ log(`Lap ${m}m ${s}s`)
+
+ }
+
+ }
+
+ startTime=Date.now()
+ timerInterval=setInterval(updateTimer,100)
+
 }
 
-/* -------------------------
-   CHECKMARK
-------------------------- */
-function markMoment() {
-  if (startTime === null) return;
-  const moment = Date.now() - startTime;
-  checkmarks.push({ time: moment, lastLapTriggered: -1 });
 
-  if (!muteMode) playSound("remind next lap.mp3");
+function markMoment(){
 
-  log("Checkmark a " + (moment / 1000).toFixed(2) + "s");
+ if(startTime===null)return
+
+ const moment=Date.now()-startTime
+
+ checkmarks.push({
+ time:moment,
+ lastLapTriggered:-1
+ })
+
+ if(!muteMode){
+
+ if(!firstReminderDone){
+
+ firstReminderDone=true
+
+ }else{
+
+ playSound("lap reminder_.mp3")
+
+ }
+
+ }
+
+ log("Checkpoint "+(moment/1000).toFixed(2)+"s")
+
 }
 
-/* -------------------------
-   LOG
-------------------------- */
-function log(msg) {
-  document.getElementById("log").innerHTML += msg + "<br>";
+
+function log(msg){
+
+ const logBox=document.getElementById("log")
+
+ logBox.innerHTML+=msg+"<br>"
+
+ logBox.scrollTop=logBox.scrollHeight
+
 }
 
-/* -------------------------
-   VOCE ROBOTICA
-------------------------- */
-function speak(text) {
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.lang = "it-IT";
-  speechSynthesis.speak(utter);
+
+function speak(text){
+
+ const u=new SpeechSynthesisUtterance(text)
+
+ u.lang="it-IT"
+
+ speechSynthesis.speak(u)
+
 }
 
-/* -------------------------
-   MICROFONO
-------------------------- */
-function initSpeech() {
-  if (micStarted) return;
-  micStarted = true;
 
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    alert("Il tuo browser non supporta SpeechRecognition.");
-    return;
-  }
 
-  const recognition = new SpeechRecognition();
-  recognition.lang = "it-IT";
-  recognition.continuous = true;
-  recognition.interimResults = false;
-recognition.onresult = (event) => {
-    const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
-    log("Comando: " + transcript);
+function initSpeech(){
 
-    if (transcript.length < 2) return;
+ if(micStarted)return
+ micStarted=true
 
-    if (["tempo","start","via","parti"].some(w => transcript.includes(w))) {
-        startTimer();
-    }
-    else if (["fine","stop","ferma","chiudi","end"].some(w => transcript.includes(w))) {
-        stopTimer();
-    }
-    else if (["tieni","ricorda","segna","mark"].some(w => transcript.includes(w))) {
-        markMoment();
-    }
-    else if (["silenzio","stai zitto","non parlare","mute radio"].some(w => transcript.includes(w))) {
-        muteMode = true;
-        playSound("talkno.mp3");
-        log("Modalità silenziosa attivata");
-    }
-    else if (["tempo totale","totale","tempo gara","tempo completo"].some(w => transcript.includes(w))) {
-        const elapsed = Date.now() - totalStartTime;
-        const minutes = Math.floor(elapsed / 60000);
-        const seconds = Math.floor((elapsed % 60000) / 1000);
+ const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition
 
-        const text = `Sono passati ${minutes} minuti e ${seconds} secondi.`;
-        speak(text);
-        log("Tempo totale richiesto → " + text);
-    }
-    else if (["giro","giri","quanti giri","numero giri","giri totali","totale giri"]
-             .some(w => transcript.includes(w))) {
+ const recognition=new SpeechRecognition()
 
-        const text = `Hai completato ${currentLap} giri.`;
-        speak(text);
-        log("Richiesta giri → " + text);
-    }
-    else {
-        log("Comando ignorato");
-    }
-};
+ recognition.lang="it-IT"
+ recognition.continuous=true
+ recognition.interimResults=false
 
-  recognition.onend = () => {
-    if (!audioPlaying) {
-      setTimeout(() => recognition.start(), 300);
-    }
-  };
+ recognition.onresult=(event)=>{
 
-  recognition.start();
+ const text=event.results[event.results.length-1][0].transcript
+ .trim()
+ .toLowerCase()
+
+ log("Voice: "+text)
+
+
+ if(["via","start","go","begin","avvia","parti"].some(w=>text.includes(w)))
+ startTimer()
+
+ else if(["stop","fine","end","ferma"].some(w=>text.includes(w)))
+ stopTimer()
+
+ else if(["segna","mark","checkpoint","ricorda"].some(w=>text.includes(w)))
+ markMoment()
+
+ else if(["mute","silenzio","quiet"].some(w=>text.includes(w))){
+ muteMode=true
+ log("Mute mode")
+ }
+
+ else if(["tempo totale","total time","race time","tempo gara"].some(w=>text.includes(w))){
+
+ if(totalStartTime===null){
+ speak("Il timer non è partito")
+ return
+ }
+
+ const elapsed=Date.now()-totalStartTime
+
+ const m=Math.floor(elapsed/60000)
+ const s=Math.floor((elapsed%60000)/1000)
+
+ speak(`${m} minutes ${s} seconds`)
+
+ }
+
+ else if(["giri","laps","lap count","numero giri"].some(w=>text.includes(w))){
+
+ speak(`You completed ${currentLap} laps`)
+
+ }
+
+ }
+
+ recognition.onend=()=>{
+ if(!audioPlaying)
+ setTimeout(()=>recognition.start(),300)
+ }
+
+ recognition.start()
+
 }
 
-document.getElementById("startMic").onclick = initSpeech;
+document.getElementById("startMic").onclick=initSpeech
 
-/* -------------------------
-   COUNTER GIRI
-------------------------- */
-function updateLapCounter() {
-  document.getElementById("lapCounter").textContent = "Giro: " + currentLap;
+
+function updateLapCounter(){
+ document.getElementById("lapCounter").textContent="Lap: "+currentLap
 }
 
-/* -------------------------
-   CHECKMARK REMINDER
-------------------------- */
-setInterval(() => {
-  if (startTime === null) return;
 
-  const elapsed = Date.now() - startTime;
+setInterval(()=>{
 
-  checkmarks.forEach(mark => {
-    if (!muteMode && mark.lastLapTriggered < currentLap) {
-      if (Math.abs(elapsed - mark.time) < 300) {
-        playSound("lap reminder_.mp3");
-        mark.lastLapTriggered = currentLap;
-      }
-    }
-  });
-}, 200);
+ if(startTime===null)return
+
+ const elapsed=Date.now()-startTime
+
+ checkmarks.forEach(mark=>{
+
+ if(!muteMode && mark.lastLapTriggered<currentLap){
+
+ if(Math.abs(elapsed-mark.time)<300){
+
+ playSound("lap reminder_.mp3")
+
+ mark.lastLapTriggered=currentLap
+
+ }
+
+ }
+
+ })
+
+},200)
 
 </script>
 
