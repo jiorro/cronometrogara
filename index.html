@@ -1,45 +1,53 @@
 <!DOCTYPE html>
 <html lang="it">
+
 <head>
 <meta charset="UTF-8">
 <title>Race Engineer</title>
+
 <style>
-body{
+body {
   background:#0f1116;
   color:white;
   font-family:Arial;
   text-align:center;
 }
-h1{
+
+h1 {
   margin-top:20px;
   color:#00ff9c;
 }
-#time{
+
+#time {
   font-size:80px;
   margin:30px;
   font-weight:bold;
 }
-#totalTime{
+
+#totalTime {
   position:absolute;
   left:20px;
   top:20px;
   font-size:18px;
 }
-#lapCounter{
+
+#lapCounter {
   position:absolute;
   left:50%;
   top:20px;
   transform:translateX(-50%);
   font-size:18px;
 }
-#sessionRemaining{
+
+#sessionRemaining {
   position:absolute;
   right:20px;
   top:20px;
   font-size:18px;
   color:#ffcc00;
 }
-button{
+
+button {
   padding:12px 25px;
   font-size:16px;
   background:#00ff9c;
@@ -47,7 +55,8 @@ button{
   border-radius:6px;
   cursor:pointer;
 }
-#log{
+
+#log {
   margin:40px auto;
   width:70%;
   background:#161a22;
@@ -59,8 +68,11 @@ button{
 }
 </style>
 </head>
+
 <body>
+
 <h1>Race Engineer</h1>
+
 <div id="totalTime">Total: 00:00.000</div>
 <div id="lapCounter">Lap: 0</div>
 <div id="sessionRemaining">Remaining: 00:00</div>
@@ -69,191 +81,206 @@ button{
 <div id="log"></div>
 
 <script>
-/* ------------------- VARIABILI ------------------- */
-let startTime=null
-let totalStartTime=null
-let timerInterval=null
-let totalTimerInterval=null
-let laps=[]
-let checkmarks=[]
-let muteMode=false
-let currentLap=0
-let micStarted=false
-let audioPlaying=false
-let firstReminderDone=false
-let sessionMinutes=10 // esempio, può chiedere all'inizio
-let sessionDuration=sessionMinutes*60*1000
-let sessionStart=null
-let nextLapType="CONSERVE"
-let skipCurrentLap=false
+/* ------------------- VARIABILI ORIGINALI ------------------- */
+let startTime=null;
+let totalStartTime=null;
+let timerInterval=null;
+let totalTimerInterval=null;
+let laps=[];
+let checkmarks=[];
+let muteMode=false;
+let currentLap=0;
+let micStarted=false;
+let audioPlaying=false;
+let firstReminderDone=false;
+
+/* ------------------- SESSIONE ------------------- */
+let sessionMinutes=parseInt(prompt("Quanto dura la sessione in minuti?", "10"))||10;
+let sessionDuration=sessionMinutes*60*1000;
+let sessionStart=null;
+
+/* ------------------- STRATEGIA ------------------- */
+let nextLapType="CONSERVE";
+let skipCurrentLap=false;
 
 /* ------------------- AUDIO ------------------- */
 function playSound(file){
-  const s=new Audio(file)
-  audioPlaying=true
-  s.onended=()=>audioPlaying=false
-  s.onerror=()=>audioPlaying=false
-  s.play().catch(()=>audioPlaying=false)
+  const s=new Audio(file);
+  audioPlaying=true;
+  s.onended=()=>audioPlaying=false;
+  s.onerror=()=>audioPlaying=false;
+  s.play().catch(()=>audioPlaying=false);
 }
 
 /* ------------------- TIMER ------------------- */
 function updateTimer(){
-  if(startTime===null)return
-  const elapsed=Date.now()-startTime
-  const m=Math.floor(elapsed/60000)
-  const s=Math.floor((elapsed%60000)/1000)
-  const ms=Math.floor(elapsed%1000)
+  if(startTime===null) return;
+  const elapsed=Date.now()-startTime;
+  const m=Math.floor(elapsed/60000);
+  const s=Math.floor((elapsed%60000)/1000);
+  const ms=Math.floor(elapsed%1000);
   document.getElementById("time").textContent=
     String(m).padStart(2,"0")+":"+
     String(s).padStart(2,"0")+"."+
-    String(ms).padStart(3,"0")
+    String(ms).padStart(3,"0");
 }
 
 function updateTotalTimer(){
-  if(totalStartTime===null)return
-  const elapsed=Date.now()-totalStartTime
-  const m=Math.floor(elapsed/60000)
-  const s=Math.floor((elapsed%60000)/1000)
-  const ms=Math.floor(elapsed%1000)
+  if(totalStartTime===null) return;
+  const elapsed=Date.now()-totalStartTime;
+  const m=Math.floor(elapsed/60000);
+  const s=Math.floor((elapsed%60000)/1000);
+  const ms=Math.floor(elapsed%1000);
   document.getElementById("totalTime").textContent=
     "Total: "+String(m).padStart(2,"0")+":"+
-    String(s).padStart(2,"0")+"."+String(ms).padStart(3,"0")
+    String(s).padStart(2,"0")+"."+String(ms).padStart(3,"0");
 
-  const remainingMs=sessionDuration-(Date.now()-sessionStart||0)
-  const remM=Math.floor(remainingMs/60000)
-  const remS=Math.floor((remainingMs%60000)/1000)
+  const remainingMs=sessionDuration-(Date.now()-sessionStart||0);
+  const remM=Math.floor(remainingMs/60000);
+  const remS=Math.floor((remainingMs%60000)/1000);
   document.getElementById("sessionRemaining").textContent=
-    "Remaining: "+String(remM).padStart(2,"0")+":"+String(remS).padStart(2,"0")
+    "Remaining: "+String(remM).padStart(2,"0")+":"+String(remS).padStart(2,"0");
 }
 
 /* ------------------- START ------------------- */
 function startTimer(){
   if(totalStartTime===null){
-    totalStartTime=Date.now()
-    totalTimerInterval=setInterval(updateTotalTimer,100)
+    totalStartTime=Date.now();
+    totalTimerInterval=setInterval(updateTotalTimer,100);
   }
-  if(!sessionStart) sessionStart=Date.now()
-  announceNextLap()
-  startTime=Date.now()
-  clearInterval(timerInterval)
-  timerInterval=setInterval(updateTimer,100)
-  playSound("starttime (1).mp3")
-  log("Timer started")
+  if(!sessionStart) sessionStart=Date.now();
+  announceNextLap();
+  startTime=Date.now();
+  clearInterval(timerInterval);
+  timerInterval=setInterval(updateTimer,100);
+  playSound("starttime (1).mp3");
+  log("Timer started");
 }
 
-/* ------------------- STRATEGIA ------------------- */
+/* ------------------- STRATEGIA PUSH/LIFT ------------------- */
 function remainingSessionTime(){
-  if(!sessionStart) return 0
-  return sessionDuration-(Date.now()-sessionStart)
+  if(!sessionStart) return 0;
+  return sessionDuration-(Date.now()-sessionStart);
 }
 
 function strategyAdvice(){
-  if(currentLap===0) return "Lift and Coast first lap"
-  if(currentLap<3) return Math.random()>0.5?"Push next lap!":"Lift and Coast"
-  // dopo 3 giri: usa media PUSH
-  const pushLaps=laps.filter(l=>l.type==="PUSH")
-  const avgPush=pushLaps.length?pushLaps.reduce((a,b)=>a+b.time,0)/pushLaps.length:0
-  const lastLap=laps[laps.length-1].time
-  if(lastLap<avgPush*0.95) return "Lift and Coast"
-  return "Push next lap!"
+  if(currentLap===0) return "Lift and Coast first lap";
+  if(currentLap<3) return Math.random()>0.5?"Push next lap!":"Lift and Coast";
+  const pushLaps=laps.filter(l=>l.type==="PUSH");
+  const avgPush=pushLaps.length?pushLaps.reduce((a,b)=>a+b.time,0)/pushLaps.length:0;
+  const lastLap=laps[laps.length-1].time;
+  if(lastLap<avgPush*0.95) return "Lift and Coast";
+  return "Push next lap!";
 }
 
 function announceNextLap(){
-  if(currentLap===0){nextLapType="CONSERVE"}
-  else{
-    nextLapType = strategyAdvice().includes("Push") ? "PUSH":"CONSERVE"
-  }
-  const msg = nextLapType==="PUSH" ? "Push! Spingi!" : "Lift and Coast! Conserva!"
-  speak(msg)
-  log("Next lap: "+nextLapType+" → "+msg)
+  if(currentLap===0){nextLapType="CONSERVE";}
+  else{ nextLapType = strategyAdvice().includes("Push") ? "PUSH":"CONSERVE"; }
+  const msg = nextLapType==="PUSH" ? "Push! Spingi!" : "Lift and Coast! Conserva!";
+  speak(msg);
+  log("Next lap: "+nextLapType+" → "+msg);
 }
 
 /* ------------------- STOP ------------------- */
 function stopTimer(){
-  if(startTime===null)return
-  clearInterval(timerInterval)
+  if(startTime===null) return;
+  clearInterval(timerInterval);
   if(skipCurrentLap){
-    log("Lap "+(currentLap+1)+" skipped (non conta)")
-    skipCurrentLap=false
-    startTime=Date.now()
-    timerInterval=setInterval(updateTimer,100)
-    return
+    log("Lap "+(currentLap+1)+" skipped (non conta)");
+    skipCurrentLap=false;
+    startTime=Date.now();
+    timerInterval=setInterval(updateTimer,100);
+    return;
   }
-  const elapsed=Date.now()-startTime
-  laps.push({time:elapsed, type:nextLapType})
-  currentLap++
-  updateLapCounter()
-  log(`Lap ${currentLap}: ${(elapsed/1000).toFixed(2)}s → ${nextLapType}`)
-  announceNextLap()
-  startTime=Date.now()
-  timerInterval=setInterval(updateTimer,100)
+  const elapsed=Date.now()-startTime;
+  laps.push({time:elapsed, type:nextLapType});
+  currentLap++;
+  updateLapCounter();
+  log(`Lap ${currentLap}: ${(elapsed/1000).toFixed(2)}s → ${nextLapType}`);
+  announceNextLap();
+  startTime=Date.now();
+  timerInterval=setInterval(updateTimer,100);
 }
 
-/* ------------------- NON CONTA */
+/* ------------------- NON CONTA ------------------- */
 function skipLap(){
   if(currentLap>0 || startTime){
-    skipCurrentLap=true
-    log("Next lap will not be counted")
-    speak("Ok, this lap will not be counted")
+    skipCurrentLap=true;
+    log("Next lap will not be counted");
+    speak("Ok, this lap will not be counted");
   }
 }
 
 /* ------------------- VOCE ------------------- */
 function speak(text){
-  const u=new SpeechSynthesisUtterance(text)
-  u.lang="en-US"
-  speechSynthesis.speak(u)
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang="en-US";
+  speechSynthesis.speak(u);
 }
 
 /* ------------------- GIRI ------------------- */
 function updateLapCounter(){
   document.getElementById("lapCounter").textContent=
-    "Lap: "+currentLap
+    "Lap: "+currentLap;
 }
 
 /* ------------------- MICROFONO ------------------- */
 function fuzzyMatch(text,commands){
-  const words=text.split(" ")
+  const words=text.split(" ");
   for(const word of words){
     for(const cmd of commands){
-      if(word===cmd) return true
-      if(word.startsWith(cmd.slice(0,3))) return true
-      if(Math.abs(word.length-cmd.length)<=1 &&
-         word.includes(cmd.slice(0,2))) return true
+      if(word===cmd) return true;
+      if(word.startsWith(cmd.slice(0,3))) return true;
+      if(Math.abs(word.length-cmd.length)<=1 && word.includes(cmd.slice(0,2))) return true;
     }
   }
-  return false
+  return false;
 }
 
 function initSpeech(){
-  if(micStarted)return
-  micStarted=true
-  const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition
-  if(!SpeechRecognition){alert("SpeechRecognition non supportato");return}
-  const recognition=new SpeechRecognition()
-  recognition.lang="it-IT"
-  recognition.continuous=true
-  recognition.interimResults=true
-  recognition.onresult = (event)=>{
+  if(micStarted) return;
+  micStarted=true;
+  const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SpeechRecognition){alert("SpeechRecognition non supportato"); return;}
+  const recognition=new SpeechRecognition();
+  recognition.lang="it-IT";
+  recognition.continuous=true;
+  recognition.interimResults=true;
+  recognition.onresult=(event)=>{
     for(let i=event.resultIndex;i<event.results.length;i++){
-      if(!event.results[i].isFinal) continue
-      const text=event.results[i][0].transcript.trim().toLowerCase()
-      log("Voice: "+text)
-      if(fuzzyMatch(text, ["start","via","go","begin","parti","avvia"])) startTimer()
-      else if(fuzzyMatch(text, ["stop","fine","end","ferma"])) stopTimer()
-      else if(fuzzyMatch(text, ["segna","mark","checkpoint","ricorda"])) markMoment()
-      else if(fuzzyMatch(text, ["mute","silenzio","quiet"])) { muteMode=true; log("Mute mode") }
-      else if(fuzzyMatch(text, ["laps","giri","lap"])) speak("You completed "+currentLap+" laps")
-      else if(fuzzyMatch(text, ["ora spingo","push now"])) { if(laps.length>0) laps[laps.length-1].type="PUSH"; log("Lap "+currentLap+" forzato a PUSH") }
-      else if(fuzzyMatch(text, ["ora conservo","conserve now"])) { if(laps.length>0) laps[laps.length-1].type="CONSERVE"; log("Lap "+currentLap+" forzato a CONSERVE") }
-      else if(fuzzyMatch(text, ["non conta","skip","ignore","cancel"])) skipLap()
+      if(!event.results[i].isFinal) continue;
+      const text=event.results[i][0].transcript.trim().toLowerCase();
+      log("Voice: "+text);
+
+      if(fuzzyMatch(text, ["start","via","go","begin","parti","avvia"])) startTimer();
+      else if(fuzzyMatch(text, ["stop","fine","end","ferma"])) stopTimer();
+      else if(fuzzyMatch(text, ["segna","mark","checkpoint","ricorda"])) markMoment();
+      else if(fuzzyMatch(text, ["mute","silenzio","quiet"])) { muteMode=true; log("Mute mode"); }
+      else if(fuzzyMatch(text, ["laps","giri","lap"])) speak("You completed "+currentLap+" laps");
+      else if(fuzzyMatch(text, ["ora spingo","push now"])) { if(laps.length>0) laps[laps.length-1].type="PUSH"; log("Lap "+currentLap+" forzato a PUSH"); }
+      else if(fuzzyMatch(text, ["ora conservo","conserve now"])) { if(laps.length>0) laps[laps.length-1].type="CONSERVE"; log("Lap "+currentLap+" forzato a CONSERVE"); }
+      else if(fuzzyMatch(text, ["non conta","skip","ignore","cancel"])) skipLap();
     }
   }
-  recognition.onend=()=>{ if(!audioPlaying) setTimeout(()=>recognition.start(),50) }
-  recognition.start()
+  recognition.onend=()=>{ if(!audioPlaying) setTimeout(()=>recognition.start(),50); }
+  recognition.start();
 }
 
-document.getElementById("startMic").onclick=initSpeech
+document.getElementById("startMic").onclick=initSpeech;
+
+/* ------------------- REMINDER ------------------- */
+setInterval(()=>{
+  if(startTime===null) return;
+  const elapsed=Date.now()-startTime;
+  checkmarks.forEach(mark=>{
+    if(!muteMode && mark.lastLapTriggered<currentLap){
+      if(Math.abs(elapsed-mark.time)<300){
+        playSound("lap reminder_.mp3");
+        mark.lastLapTriggered=currentLap;
+      }
+    }
+  });
+},200);
 </script>
 </body>
 </html>
