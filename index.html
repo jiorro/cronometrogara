@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="it">
+
 <head>
 <meta charset="UTF-8">
 <title>Race Engineer</title>
@@ -7,59 +8,55 @@
 <style>
 
 body{
-    background:#0f1116;
-    color:white;
-    font-family:Arial;
-    text-align:center;
+background:#0f1116;
+color:white;
+font-family:Arial;
+text-align:center;
 }
 
 h1{
-    margin-top:20px;
-    color:#00ff9c;
+margin-top:20px;
+color:#00ff9c;
 }
 
 #time{
-    font-size:80px;
-    margin:30px;
-    font-weight:bold;
+font-size:80px;
+margin:30px;
+font-weight:bold;
 }
 
 #totalTime{
-    position:absolute;
-    left:20px;
-    top:20px;
-    font-size:18px;
+position:absolute;
+left:20px;
+top:20px;
+font-size:18px;
 }
 
 #lapCounter{
-    position:absolute;
-    right:20px;
-    top:20px;
-    font-size:18px;
+position:absolute;
+right:20px;
+top:20px;
+font-size:18px;
 }
 
 button{
-    padding:12px 25px;
-    font-size:16px;
-    background:#00ff9c;
-    border:none;
-    border-radius:6px;
-    cursor:pointer;
-}
-
-button:hover{
-    background:#00cc7a;
+padding:12px 25px;
+font-size:16px;
+background:#00ff9c;
+border:none;
+border-radius:6px;
+cursor:pointer;
 }
 
 #log{
-    margin:40px auto;
-    width:70%;
-    background:#161a22;
-    padding:20px;
-    border-radius:10px;
-    text-align:left;
-    height:200px;
-    overflow:auto;
+margin:40px auto;
+width:70%;
+background:#161a22;
+padding:20px;
+border-radius:10px;
+text-align:left;
+height:200px;
+overflow:auto;
 }
 
 </style>
@@ -80,6 +77,8 @@ button:hover{
 
 <script>
 
+/* ------------------- VARIABILI ------------------- */
+
 let startTime=null
 let totalStartTime=null
 
@@ -94,8 +93,10 @@ let currentLap=0
 
 let micStarted=false
 let audioPlaying=false
+
 let firstReminderDone=false
 
+/* ------------------- AUDIO ------------------- */
 
 function playSound(file){
 
@@ -110,6 +111,7 @@ function playSound(file){
 
 }
 
+/* ------------------- TIMER ------------------- */
 
 function updateTimer(){
 
@@ -129,7 +131,6 @@ function updateTimer(){
 
 }
 
-
 function updateTotalTimer(){
 
  if(totalStartTime===null)return
@@ -141,12 +142,14 @@ function updateTotalTimer(){
  const ms=Math.floor(elapsed%1000)
 
  document.getElementById("totalTime").textContent=
- "Total: "+String(m).padStart(2,"0")+":"+
+ "Total: "+
+ String(m).padStart(2,"0")+":"+
  String(s).padStart(2,"0")+"."+
  String(ms).padStart(3,"0")
 
 }
 
+/* ------------------- START ------------------- */
 
 function startTimer(){
 
@@ -169,6 +172,7 @@ function startTimer(){
 
 }
 
+/* ------------------- STOP ------------------- */
 
 function stopTimer(){
 
@@ -196,19 +200,21 @@ function stopTimer(){
  if(!hadLaps || elapsed<=best){
 
  setTimeout(()=>playSound("Record (online-voice-recorder (1).mp3"),200)
- log(`Best lap ${m}m ${s}s`)
+ log("Best lap")
 
  }
+
  else if(elapsed>=worst){
 
  setTimeout(()=>playSound("worst lap.mp3"),200)
- log(`Worst lap ${m}m ${s}s`)
+ log("Worst lap")
 
  }
+
  else{
 
  setTimeout(()=>playSound("normal lap time.mp3"),200)
- log(`Lap ${m}m ${s}s`)
+ log("Lap recorded")
 
  }
 
@@ -219,6 +225,7 @@ function stopTimer(){
 
 }
 
+/* ------------------- MARK ------------------- */
 
 function markMoment(){
 
@@ -233,109 +240,122 @@ function markMoment(){
 
  if(!muteMode){
 
- if(!firstReminderDone){
+ if(firstReminderDone)
+ playSound("lap reminder_.mp3")
 
  firstReminderDone=true
 
- }else{
-
- playSound("lap reminder_.mp3")
-
  }
 
- }
-
- log("Checkpoint "+(moment/1000).toFixed(2)+"s")
+ log("Checkpoint "+(moment/1000).toFixed(2))
 
 }
 
+/* ------------------- LOG ------------------- */
 
 function log(msg){
 
- const logBox=document.getElementById("log")
+ const box=document.getElementById("log")
 
- logBox.innerHTML+=msg+"<br>"
+ box.innerHTML+=msg+"<br>"
 
- logBox.scrollTop=logBox.scrollHeight
-
-}
-
-
-function speak(text){
-
- const u=new SpeechSynthesisUtterance(text)
-
- u.lang="it-IT"
-
- speechSynthesis.speak(u)
+ box.scrollTop=box.scrollHeight
 
 }
 
+/* ------------------- FUZZY MATCH VELOCE ------------------- */
 
+function fuzzyMatch(text,commands){
+
+ const words=text.split(" ")
+
+ for(const word of words){
+
+ for(const cmd of commands){
+
+ if(word===cmd) return true
+
+ if(word.startsWith(cmd.slice(0,3))) return true
+
+ if(Math.abs(word.length-cmd.length)<=1 &&
+ word.includes(cmd.slice(0,2)))
+ return true
+
+ }
+
+ }
+
+ return false
+
+}
+
+/* ------------------- MICROFONO ------------------- */
 
 function initSpeech(){
 
  if(micStarted)return
  micStarted=true
 
- const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition
+ const SpeechRecognition=
+ window.SpeechRecognition||window.webkitSpeechRecognition
+
+ if(!SpeechRecognition){
+
+ alert("SpeechRecognition non supportato")
+
+ return
+ }
 
  const recognition=new SpeechRecognition()
 
  recognition.lang="it-IT"
  recognition.continuous=true
- recognition.interimResults=false
+ recognition.interimResults=true
 
  recognition.onresult=(event)=>{
 
- const text=event.results[event.results.length-1][0].transcript
+ const text=
+ event.results[event.results.length-1][0]
+ .transcript
  .trim()
  .toLowerCase()
 
  log("Voice: "+text)
 
-
- if(["via","start","go","begin","avvia","parti"].some(w=>text.includes(w)))
+ if(fuzzyMatch(text,
+ ["start","via","go","begin","parti","avvia"]))
  startTimer()
 
- else if(["stop","fine","end","ferma"].some(w=>text.includes(w)))
+ else if(fuzzyMatch(text,
+ ["stop","fine","end","ferma"]))
  stopTimer()
 
- else if(["segna","mark","checkpoint","ricorda"].some(w=>text.includes(w)))
+ else if(fuzzyMatch(text,
+ ["segna","mark","checkpoint","ricorda"]))
  markMoment()
 
- else if(["mute","silenzio","quiet"].some(w=>text.includes(w))){
+ else if(fuzzyMatch(text,
+ ["mute","silenzio","quiet"])){
+
  muteMode=true
  log("Mute mode")
- }
-
- else if(["tempo totale","total time","race time","tempo gara"].some(w=>text.includes(w))){
-
- if(totalStartTime===null){
- speak("Il timer non è partito")
- return
- }
-
- const elapsed=Date.now()-totalStartTime
-
- const m=Math.floor(elapsed/60000)
- const s=Math.floor((elapsed%60000)/1000)
-
- speak(`${m} minutes ${s} seconds`)
 
  }
 
- else if(["giri","laps","lap count","numero giri"].some(w=>text.includes(w))){
+ else if(fuzzyMatch(text,
+ ["laps","giri","lap"])){
 
- speak(`You completed ${currentLap} laps`)
+ speak("You completed "+currentLap+" laps")
 
  }
 
  }
 
  recognition.onend=()=>{
+
  if(!audioPlaying)
- setTimeout(()=>recognition.start(),300)
+ setTimeout(()=>recognition.start(),50)
+
  }
 
  recognition.start()
@@ -344,11 +364,28 @@ function initSpeech(){
 
 document.getElementById("startMic").onclick=initSpeech
 
+/* ------------------- VOCE ------------------- */
 
-function updateLapCounter(){
- document.getElementById("lapCounter").textContent="Lap: "+currentLap
+function speak(text){
+
+ const u=new SpeechSynthesisUtterance(text)
+
+ u.lang="en-US"
+
+ speechSynthesis.speak(u)
+
 }
 
+/* ------------------- GIRI ------------------- */
+
+function updateLapCounter(){
+
+ document.getElementById("lapCounter").textContent=
+ "Lap: "+currentLap
+
+}
+
+/* ------------------- REMINDER ------------------- */
 
 setInterval(()=>{
 
