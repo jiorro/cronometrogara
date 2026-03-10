@@ -96,6 +96,10 @@ let audioPlaying=false
 
 let firstReminderDone=false
 
+let sessionMinutes=0
+let sessionDuration=0
+let sessionStart=null
+
 /* ------------------- AUDIO ------------------- */
 
 function playSound(file){
@@ -161,6 +165,8 @@ function startTimer(){
 
  }
 
+ if(!sessionStart) sessionStart=Date.now()
+
  startTime=Date.now()
 
  clearInterval(timerInterval)
@@ -183,11 +189,11 @@ function stopTimer(){
  const elapsed=Date.now()-startTime
 
  const hadLaps=laps.length>0
+ const best=hadLaps?Math.min(...laps.map(l=>l.time)):Infinity
+ const worst=hadLaps?Math.max(...laps.map(l=>l.time)):-Infinity
 
- const best=hadLaps?Math.min(...laps):Infinity
- const worst=hadLaps?Math.max(...laps):-Infinity
-
- laps.push(elapsed)
+ const type = decideLapType(elapsed)
+ laps.push({time:elapsed, type})
 
  const m=Math.floor(elapsed/60000)
  const s=((elapsed%60000)/1000).toFixed(2)
@@ -200,25 +206,29 @@ function stopTimer(){
  if(!hadLaps || elapsed<=best){
 
  setTimeout(()=>playSound("Record (online-voice-recorder (1).mp3"),200)
- log("Best lap")
+ log(`Lap ${currentLap}: ${m}m ${s}s → PUSH (best)`)
 
  }
 
  else if(elapsed>=worst){
 
  setTimeout(()=>playSound("worst lap.mp3"),200)
- log("Worst lap")
+ log(`Lap ${currentLap}: ${m}m ${s}s → CONSERVE (worst)`)
 
  }
 
  else{
 
  setTimeout(()=>playSound("normal lap time.mp3"),200)
- log("Lap recorded")
+ log(`Lap ${currentLap}: ${m}m ${s}s → ${type}`)
 
  }
 
  }
+
+ const advice = strategyAdvice()
+ speak(advice)
+ log("Strategy advice: "+advice)
 
  startTime=Date.now()
  timerInterval=setInterval(updateTimer,100)
@@ -291,6 +301,14 @@ function fuzzyMatch(text,commands){
 
 /* ------------------- MICROFONO ------------------- */
 
+function askSessionDuration(){
+ const min = prompt("Durata della sessione in minuti?")
+ if(!min) return
+ sessionMinutes=parseFloat(min)
+ sessionDuration=sessionMinutes*60000
+}
+askSessionDuration()
+
 function initSpeech(){
 
  if(micStarted)return
@@ -304,6 +322,7 @@ function initSpeech(){
  alert("SpeechRecognition non supportato")
 
  return
+
  }
 
  const recognition=new SpeechRecognition()
@@ -312,7 +331,7 @@ function initSpeech(){
  recognition.continuous=true
  recognition.interimResults=true
 
-recognition.onresult = (event) => {
+ recognition.onresult = (event) => {
 
   for (let i = event.resultIndex; i < event.results.length; i++) {
 
@@ -324,6 +343,7 @@ recognition.onresult = (event) => {
 
     log("Voice: " + text);
 
+    // COMANDI ESISTENTI
     if (fuzzyMatch(text, ["start","via","go","begin","parti","avvia"]))
       startTimer();
 
@@ -334,24 +354,37 @@ recognition.onresult = (event) => {
       markMoment();
 
     else if (fuzzyMatch(text, ["mute","silenzio","quiet"])) {
-
       muteMode = true;
       log("Mute mode");
-
     }
 
     else if (fuzzyMatch(text, ["laps","giri","lap"])) {
-
       speak("You completed " + currentLap + " laps");
+    }
 
+    // NUOVA LOGICA PUSH/CONSERVE VOCALE
+    else if (fuzzyMatch(text, ["ora spingo","push now","ora accelera","vai forte"])){
+      if(laps.length>0){
+        laps[laps.length-1].type="PUSH"
+        log("Lap "+currentLap+" forzato a PUSH")
+      }
+    }
+    else if (fuzzyMatch(text, ["ora conservo","conserve now","ora rilassati","vai tranquillo"])){
+      if(laps.length>0){
+        laps[laps.length-1].type="CONSERVE"
+        log("Lap "+currentLap+" forzato a CONSERVE")
+      }
+    }
+
+    else if(fuzzyMatch(text, ["strategy","strategia","push","plan"])){
+      const advice = strategyAdvice()
+      speak(advice)
+      log("Strategy advice (voice): "+advice)
     }
 
   }
 
-};
- }
-
- }
+ };
 
  recognition.onend=()=>{
 
@@ -412,6 +445,31 @@ setInterval(()=>{
  })
 
 },200)
+
+/* ------------------- STRATEGIA PUSH/CONSERVE ------------------- */
+
+function remainingSessionTime(){
+ if(!sessionStart) return 0
+ return sessionDuration-(Date.now()-sessionStart)
+}
+
+function decideLapType(elapsed){
+ if(laps.length<2) return "PUSH"
+ const pushLaps=laps.filter(l=>l.type==="PUSH")
+ if(pushLaps.length===0) return "PUSH"
+ const avgPush = pushLaps.reduce((sum,l)=>sum+l.time,0)/pushLaps.length
+ return elapsed<=avgPush ? "PUSH" : "CONSERVE"
+}
+
+function strategyAdvice(){
+ if(!sessionStart || laps.length===0) return "Start the first lap"
+ const pushLaps=laps.filter(l=>l.type==="PUSH")
+ const avgPush=pushLaps.length ? pushLaps.reduce((a,b)=>a+b.time,0)/pushLaps.length : 0
+ const remaining = remainingSessionTime()
+ if(remaining>avgPush) return "Push next lap!"
+ if(remaining>avgPush*0.8) return "Last push lap!"
+ return "Prepare lap, conserve energy"
+}
 
 </script>
 
